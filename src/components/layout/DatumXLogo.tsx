@@ -8,7 +8,7 @@ interface DatumXLogoProps {
 }
 
 export function DatumXLogo({ variant = 'sidebar', className }: DatumXLogoProps) {
-  const sizing = variant === 'sidebar' ? 'w-[204px] md:w-[216px]' : 'w-[96px] md:w-[108px]'
+  const sizing = variant === 'sidebar' ? 'w-[216px] md:w-[228px]' : 'w-[96px] md:w-[108px]'
 
   return (
     <div className={clsx('flex items-center bg-transparent', className)}>
