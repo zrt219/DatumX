@@ -1,0 +1,26 @@
+{
+  "network": "xrpl-testnet",
+  "deploymentVersion": "v4.5-archived",
+  "chainId": 1449000,
+  "networkName": "XRPL EVM Testnet",
+  "rpcUrl": "https://rpc.testnet.xrplevm.org/",
+  "explorerUrl": "https://explorer.testnet.xrplevm.org",
+  "deployer": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+  "deployedAt": "2026-04-02T01:57:18Z",
+  "deploymentTimestampMs": 1775095040363,
+  "thresholds": {
+    "minValidatorCount": 3,
+    "minApprovalRatioBps": 6667,
+    "minConfidenceBps": 7000
+  },
+  "contracts": {
+    "DrillProofAccess": "0x137d48dc29dab3d9debeba4522daca08db66c7af",
+    "ProjectRegistry": "0x6c11f63c7da3aded68f3c526bad3313c966fb1f1",
+    "DatasetRegistry": "0xeaef79fcba4dbaa5e695ace4d07843a03979fc98",
+    "ValidationModule": "0xc553f21cb6e3e0f612f60f408a636f2f58f6722f",
+    "ProjectRouter": "0x70785c5d3dc81e3298c676b4f1bf0bb715ada2bb",
+    "DuckCreekAdapter": "0x72b4f2dd926e33c6e784dc87a0c768fe080ff252",
+    "ShirleyCentralAdapter": "0x9ec29f893695e6836389aa0f1d22302ef804ab27",
+    "ShirleyEastAdapter": "0xf27fd39be462f2bfb7556ee06ec4dabdff54e580"
+  }
+}

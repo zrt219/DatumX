@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@500;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #f1f4f8;
+  background: #0b0f14;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: #0c1117;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(95, 127, 167, 0.24);
+  color: #f8fbff;
+}
+
+@keyframes lineage-path-glide {
+  from {
+    opacity: 0.1;
+    transform: translateY(-8%);
+  }
+  to {
+    opacity: 0.18;
+    transform: translateY(8%);
+  }
+}
+
+@keyframes lineage-detail-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lineage-current-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.96;
+  }
+}
+
+.lineage-node {
+  will-change: transform, background-color;
+}
+
+.lineage-node:hover,
+.lineage-node:focus-visible {
+  transform: translateY(-1px);
+}
+
+.lineage-path-pulse {
+  animation: lineage-path-glide 6.8s ease-in-out infinite;
+}
+
+.lineage-detail-enter {
+  animation: lineage-detail-fade 200ms ease-out;
+}
+
+.lineage-current-pulse {
+  animation: lineage-current-breathe 5.8s ease-in-out infinite;
+}
+
+.lineage-spine-pulse {
+  animation: lineage-path-glide 7.2s ease-in-out infinite;
+}

@@ -1,0 +1,19 @@
+<svg width="800" height="500" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Transparent background by default -->
+
+  <!-- Line connections -->
+  <line x1="200" y1="200" x2="300" y2="190" stroke="#E5E2DC" stroke-width="6" stroke-linecap="round"></line>
+  <line x1="300" y1="190" x2="420" y2="180" stroke="#E5E2DC" stroke-width="6" stroke-linecap="round"></line>
+  <line x1="420" y1="180" x2="600" y2="140" stroke="#E5E2DC" stroke-width="6" stroke-linecap="round"></line>
+
+  <!-- Nodes -->
+  <circle cx="200" cy="200" r="22" fill="#E5E2DC"></circle>
+  <circle cx="300" cy="190" r="22" fill="#E5E2DC"></circle>
+  <circle cx="420" cy="180" r="22" fill="#C9CFBB"></circle>
+  <circle cx="600" cy="140" r="26" fill="#A8B58A"></circle>
+
+  <!-- Text -->
+  <text x="200" y="350" font-family="Arial, Helvetica, sans-serif" font-size="90" fill="#E5E2DC">
+    Datum<tspan fill="#A8B58A">X</tspan>
+  </text>
+</svg>
