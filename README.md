@@ -1,17 +1,17 @@
-# DatumX
+﻿# DatumX
 
-![License](https://img.shields.io/badge/License-MIT-green) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-black) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-blue) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-0aa) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-59316b) ![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-brightgreen)
+![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-brightgreen) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-blue) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-black) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-59316b) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-0aa) ![License](https://img.shields.io/badge/License-MIT-green)
 
-DatumX is a smart-contract protocol plus the **Resource Integrity Console** for proving that AI-transformed industrial datasets are release-grade. It treats each dataset release as a governed analytical unit with canonical payloads, deterministic lineage, validator consensus, and auditor-controlled finalization.
+DatumX is a Solidity protocol and **Resource Integrity Console** for proving that AI-transformed industrial datasets are release-grade. It treats every dataset release as a governed analytical unit with canonical payloads, deterministic lineage, validator consensus, and auditor-controlled finalization.
 
 DatumX Protocol · Built by ZRT — https://github.com/zrt219
 
 ## War Diary (XRPL EVM Testnet)
-- 2026-04-02: V4.5 deploy (archived) — first full stack on XRPL EVM testnet with typed payload gaps. Addresses recorded in `C:\Users\Zhane\Documents\New project\DatumX\deployments\archive\xrpl-testnet-v4.json`.
-- 2026-04-02: V5 redeploy — typed AdapterPayload boundary fixed; canonical addresses recorded in `C:\Users\Zhane\Documents\New project\DatumX\deployments\xrpl-testnet.json`.
-- 2026-04-03: Admin fast-path smoke — thresholds lowered to 1 validator, lineage 3→4 finalized, thresholds restored (tx: lower `0x56b7797abcc95b022e5007dd47d7cc5576519d5073b962ed9c4899426caa433f`, restore `0x99a639b01dbd0ed81cceeb8eade9088fcde05ae50c40c16c29f157336a9148fa`).
-- 2026-04-04: Release-candidate fast-path smoke — thresholds lowered, lineage 5→6 finalized, thresholds restored (tx: lower `0x319f25e36aba86209ed361d5456f1d2a431be73baaaeff31fb8af054c2cb2744`, restore `0xa8bd9b575fa02d2f00abe902cfa6aa700d4fba08e26906815b41cb3d58713d5d`).
-- 2026-04-04: Explorer verification attempts — all 8 contracts submitted (bulk and single) to XRPL Blockscout API, accepted but never marked verified; likely explorer queue/processing issue. Details in `C:\Users\Zhane\Documents\New project\DatumX\deployments\xrpl-testnet-verification.md`.
+- **2026-04-02 — V4.5 deploy (archived).** Intent: first full stack on XRPL EVM testnet. Change: shipped typed payloads with gaps. Outcome: replaced; addresses captured in `deployments/archive/xrpl-testnet-v4.json`.
+- **2026-04-02 — V5 redeploy (canonical).** Intent: fix AdapterPayload typing boundary. Change: redeployed full stack. Outcome: canonical addresses in `deployments/xrpl-testnet.json`.
+- **2026-04-03 — Admin fast-path smoke.** Intent: prove lineage and finalization under lowered quorum. Change: thresholds dropped to 1; lineage 3→4 exercised. Outcome: finalized; thresholds restored (lower `0x56b7797abcc95b022e5007dd47d7cc5576519d5073b962ed9c4899426caa433f`, restore `0x99a639b01dbd0ed81cceeb8eade9088fcde05ae50c40c16c29f157336a9148fa`).
+- **2026-04-04 — Release-candidate fast-path smoke.** Intent: repeat fast-path with fresh IDs. Change: thresholds lowered; lineage 5→6 executed. Outcome: finalized; thresholds restored (lower `0x319f25e36aba86209ed361d5456f1d2a431be73baaaeff31fb8af054c2cb2744`, restore `0xa8bd9b575fa02d2f00abe902cfa6aa700d4fba08e26906815b41cb3d58713d5d`).
+- **2026-04-04 — Explorer verification attempts.** Intent: verify all contracts on Blockscout. Change: bulk + single submissions accepted. Outcome: verification stuck in queue; details in `deployments/xrpl-testnet-verification.md`.
 
 ## Deployment Ledger
 | Role | V5 Address / Tx | V4.5 Address | Deploy Count |
@@ -25,10 +25,12 @@ DatumX Protocol · Built by ZRT — https://github.com/zrt219
 | Adapter (`ShirleyCentralAdapter`) | [0xD54e...6797](https://explorer.testnet.xrplevm.org/address/0xD54e7c8298934e850eBcF4aa2E541eFb821a6797) (tx [0x1490...fbca](https://explorer.testnet.xrplevm.org/tx/0x149046e84c163522d1c65a8ff81d0247683fba70fefe786f1413aac41f73fbca)) | [0x9ec2...ab27](https://explorer.testnet.xrplevm.org/address/0x9ec29f893695e6836389aa0f1d22302ef804ab27) | 2 |
 | Adapter (`ShirleyEastAdapter`) | [0xCB04...b993](https://explorer.testnet.xrplevm.org/address/0xCB04fEE2D7F8555a9C9b2473442F81A4b64Db993) (tx [0xf129...b93eb](https://explorer.testnet.xrplevm.org/tx/0xf12905c2fc3be93d5f0c2bab090012128b2a5a9db0c105f53f62f01f5c5b93eb)) | [0xf27f...e580](https://explorer.testnet.xrplevm.org/address/0xf27fd39be462f2bfb7556ee06ec4dabdff54e580) | 2 |
 
+_Manifests:_ V5 `deployments/xrpl-testnet.json`; archived V4.5 `deployments/archive/xrpl-testnet-v4.json`.
+
 ## Live Lineage Proofs (XRPL)
-- Lineage 1→2 (SHIRLEY_CENTRAL): root submit `0xc38e6d451f302740bd8fa6398405ce11d162e7532f636b44927ecad94599a6e8`, finalize `0x57fdf994da619d999a5750b9469cb02b51ba6dcdae73d6a183ba483032cd6705`; child submit `0x8a8ab32b0b6b0621bdfcfadb395fc8fa2c9099c18333fa0b11532b0056ea8bdd`, finalize `0x57770356b9776a046415f32d7ed52d1d99eaa92cc02f6ac348b3c4595d8e5c0f`.
-- Lineage 3→4 (admin fast-path smoke): thresholds lowered `0x56b7797abcc95b022e5007dd47d7cc5576519d5073b962ed9c4899426caa433f`, root submit `0x23241778cc15a87e4af6c17674e568fdd2d32f703746344e1743763dc65e8d8d`, finalize `0xbc668f21a9b0ae2c7653de25f2e3750d96d2c73e76b9d28fd40ec5a87749d20d`; child finalize `0x1360e79b394105c56daa82a56c1e07c7e938becd72e94efa6ca529572162be85`; thresholds restored `0x99a639b01dbd0ed81cceeb8eade9088fcde05ae50c40c16c29f157336a9148fa`.
-- Lineage 5→6 (release-candidate smoke): thresholds lowered `0x319f25e36aba86209ed361d5456f1d2a431be73baaaeff31fb8af054c2cb2744`, root submit `0x5643c2e16114c7b833d9975e7fca353f79d7aa2b49bd50b5d4f249424ffb098f`, finalize `0xcada91ccf516fdce022ae3d4b7b3b3b84950115a3e0522f3fd16aeeb41509796`; child finalize `0x47b285551172bde367cbaf78839e891a8e6b5d4a32f09e55786af0ae2595742b`; thresholds restored `0xa8bd9b575fa02d2f00abe902cfa6aa700d4fba08e26906815b41cb3d58713d5d`.
+- 1→2 (SHIRLEY_CENTRAL): root `0xc38e6d451f302740bd8fa6398405ce11d162e7532f636b44927ecad94599a6e8`, finalize `0x57fdf994da619d999a5750b9469cb02b51ba6dcdae73d6a183ba483032cd6705`; child `0x8a8ab32b0b6b0621bdfcfadb395fc8fa2c9099c18333fa0b11532b0056ea8bdd`, finalize `0x57770356b9776a046415f32d7ed52d1d99eaa92cc02f6ac348b3c4595d8e5c0f`.
+- 3→4 (admin fast-path): thresholds lower `0x56b7797abcc95b022e5007dd47d7cc5576519d5073b962ed9c4899426caa433f`; root `0x23241778cc15a87e4af6c17674e568fdd2d32f703746344e1743763dc65e8d8d`, finalize `0xbc668f21a9b0ae2c7653de25f2e3750d96d2c73e76b9d28fd40ec5a87749d20d`; child finalize `0x1360e79b394105c56daa82a56c1e07c7e938becd72e94efa6ca529572162be85`; thresholds restore `0x99a639b01dbd0ed81cceeb8eade9088fcde05ae50c40c16c29f157336a9148fa`.
+- 5→6 (release-candidate): thresholds lower `0x319f25e36aba86209ed361d5456f1d2a431be73baaaeff31fb8af054c2cb2744`; root `0x5643c2e16114c7b833d9975e7fca353f79d7aa2b49bd50b5d4f249424ffb098f`, finalize `0xcada91ccf516fdce022ae3d4b7b3b3b84950115a3e0522f3fd16aeeb41509796`; child finalize `0x47b285551172bde367cbaf78839e891a8e6b5d4a32f09e55786af0ae2595742b`; thresholds restore `0xa8bd9b575fa02d2f00abe902cfa6aa700d4fba08e26906815b41cb3d58713d5d`.
 
 ## What This Repo Is
 - Solidity protocol for trusted transformed datasets on XRPL EVM testnet.
@@ -83,8 +85,11 @@ Adapters are the normalization boundary. Each project has its own adapter; only 
 - Auditors finalize only approved datasets that still meet thresholds.
 - Current thresholds: minValidatorCount=3, minApprovalRatioBps=6667, minConfidenceBps=7000.
 
+## Noble Pains Uranium Alignment
+Noble Pains is digitizing legacy uranium drill programs where interpretation risk dominates extraction cost. DatumX matches that profile: adapters enforce canonical AI-transformed payloads, deterministic lineage locks root→child proofs, validators provide consensus confidence, and auditors control finalization. The result is decision-grade drill data that can withstand investor, regulator, and board scrutiny.
+
 ## Resource Integrity Console
-React/Vite console for protocol truth: lineage, validation posture, audit timeline, MetaMask flow, XRPL explorer linking. Live reads stay centralized in `C:\Users\Zhane\Documents\New project\DatumX\src\lib\liveProtocol.ts` and related config files.
+React/Vite console for protocol truth: lineage, validation posture, audit timeline, MetaMask flow, XRPL explorer linking. Live reads stay centralized in `src/lib/liveProtocol.ts` and related config files.
 
 ## XRPL EVM Testnet Config
 - network name: XRPL EVM Testnet
@@ -94,14 +99,14 @@ React/Vite console for protocol truth: lineage, validation posture, audit timeli
 - native token: XRP
 
 ## Deployment Records
-- Manifest: `C:\Users\Zhane\Documents\New project\DatumX\deployments\xrpl-testnet.json`
-- Deployment log: `C:\Users\Zhane\Documents\New project\DatumX\deployments\xrpl-testnet.md`
-- Verification notes: `C:\Users\Zhane\Documents\New project\DatumX\deployments\xrpl-testnet-verification.md`
-- Archived V4.5 manifest: `C:\Users\Zhane\Documents\New project\DatumX\deployments\archive\xrpl-testnet-v4.json`
-- Smoke runner: `C:\Users\Zhane\Documents\New project\DatumX\script\xrpl-smoke-test.ps1`
+- Manifest: `deployments/xrpl-testnet.json`
+- Deployment log: `deployments/xrpl-testnet.md`
+- Verification notes: `deployments/xrpl-testnet-verification.md`
+- Archived V4.5 manifest: `deployments/archive/xrpl-testnet-v4.json`
+- Smoke runner: `script/xrpl-smoke-test.ps1`
 
 ## Long-Form Case Study
-`C:\Users\Zhane\Documents\New project\DatumX\docs\datumx-case-study.md`
+`docs/datumx-case-study.md`
 
 ## Local Setup
 ```bash
@@ -123,6 +128,9 @@ npm run contracts:smoke:xrpl
 ## Badges Legend
 - All badges are static Shields metadata (no CI status yet).
 - Network/status badges reflect the current XRPL EVM testnet V5 deployment.
+
+## Author's Note
+Built and narrated by ZRT (Smart Contract Engineer · Blockchain Systems Engineer · Web3 Infrastructure Engineer). Solidity discipline here is not aesthetics—it is how we guarantee operational integrity: typed payloads, no-branch lineage, validator-only reviews, auditor-only finalization, and explicit XRPL constraints (legacy gas, no `eth_estimateGas`) wired into tooling. This repository is meant to be audited, attacked, and trusted in equal measure.
 
 ## License
 MIT
