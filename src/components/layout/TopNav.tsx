@@ -1,4 +1,5 @@
 import { Bell, Search } from 'lucide-react'
+import { clsx } from 'clsx'
 import type { ProjectRecord, WalletState } from '../../types'
 import { TopRightIdentity } from './TopRightIdentity'
 
@@ -13,9 +14,24 @@ function getNetworkLabel(wallet: WalletState) {
 }
 
 function getNetworkTone(wallet: WalletState) {
-  if (!wallet.isConnected) return 'bg-white/[0.028] text-slate-300'
-  if (wallet.isCorrectNetwork) return 'bg-steel/10 text-blue-200'
-  return 'bg-amber/10 text-amber-200'
+  if (!wallet.isConnected) {
+    return {
+      shell: 'border-white/[0.05] bg-white/[0.03] text-slate-300',
+      dot: 'bg-slate-400/80 shadow-[0_0_10px_rgba(148,163,184,0.25)]',
+    }
+  }
+
+  if (wallet.isCorrectNetwork) {
+    return {
+      shell: 'border-sky-300/10 bg-[linear-gradient(180deg,rgba(80,120,176,0.12),rgba(255,255,255,0.025))] text-blue-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
+      dot: 'bg-[#c9f4a0] shadow-[0_0_12px_rgba(201,244,160,0.42)]',
+    }
+  }
+
+  return {
+    shell: 'border-amber-300/10 bg-[linear-gradient(180deg,rgba(245,158,11,0.13),rgba(255,255,255,0.022))] text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
+    dot: 'bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.34)]',
+  }
 }
 
 interface TopNavProps {
@@ -39,6 +55,8 @@ export function TopNav({
   onConnectWallet,
   onEnsureNetwork,
 }: TopNavProps) {
+  const networkTone = getNetworkTone(wallet)
+
   return (
     <header className="grid gap-3 rounded-[22px] bg-[#0f151d]/88 px-4 py-3 backdrop-blur xl:grid-cols-[240px_minmax(360px,1fr)_auto] xl:items-start">
       <div className="flex items-center gap-3 xl:min-w-[230px]">
@@ -77,24 +95,47 @@ export function TopNav({
 
       <div className="flex flex-col gap-2 xl:items-end">
         <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
-          <div className={`rounded-[10px] px-3 py-2 text-[9px] font-medium uppercase tracking-[0.24em] ${getNetworkTone(wallet)}`}>
-            {getNetworkLabel(wallet)}
+          <div
+            className={clsx(
+              'relative overflow-hidden rounded-[10px] border px-3 py-2 text-[9px] font-medium uppercase tracking-[0.24em]',
+              networkTone.shell,
+            )}
+          >
+            <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(201,244,160,0.34),transparent)]" />
+            <span className="inline-flex items-center gap-2">
+              <span className={clsx('h-1.5 w-1.5 rounded-full', networkTone.dot)} />
+              <span>{getNetworkLabel(wallet)}</span>
+            </span>
           </div>
-          <div className="rounded-[10px] bg-white/[0.02] px-3 py-2 text-[9px] font-medium uppercase tracking-[0.24em] text-slate-300">
-            Admin / Validator
+          <div className="relative overflow-hidden rounded-[10px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.018))] px-3 py-2 text-[9px] font-medium uppercase tracking-[0.24em] text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(127,184,255,0.22),transparent)]" />
+            <span className="inline-flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-sky-300/85 shadow-[0_0_10px_rgba(125,211,252,0.28)]" />
+              <span>Admin / Validator</span>
+            </span>
           </div>
           <button
             type="button"
             onClick={() => void (wallet.isConnected && !wallet.isCorrectNetwork ? onEnsureNetwork() : onConnectWallet())}
             disabled={wallet.isBusy}
-            className="rounded-[10px] bg-white/[0.028] px-3.5 py-2 text-sm text-white transition duration-200 hover:bg-white/[0.045] disabled:cursor-not-allowed disabled:opacity-60"
+            className="relative overflow-hidden rounded-[10px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] px-3.5 py-2 text-sm text-white transition duration-200 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.028))] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {wallet.isBusy ? 'Working...' : wallet.isConnected && !wallet.isCorrectNetwork ? 'Switch to XRPL EVM Testnet' : shortenAddress(wallet.account)}
+            <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(201,244,160,0.26),transparent)]" />
+            <span className="inline-flex items-center gap-2">
+              <span
+                className={clsx(
+                  'h-1.5 w-1.5 rounded-full transition',
+                  wallet.isConnected ? 'bg-[#c9f4a0] shadow-[0_0_10px_rgba(201,244,160,0.36)]' : 'bg-slate-400/80 shadow-[0_0_10px_rgba(148,163,184,0.2)]',
+                )}
+              />
+              <span>{wallet.isBusy ? 'Working...' : wallet.isConnected && !wallet.isCorrectNetwork ? 'Switch to XRPL EVM Testnet' : shortenAddress(wallet.account)}</span>
+            </span>
           </button>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/[0.02] text-slate-300 transition duration-200 hover:bg-white/[0.04]"
+            className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.028),rgba(255,255,255,0.015))] text-slate-300 transition duration-200 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.042),rgba(255,255,255,0.024))]"
           >
+            <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(127,184,255,0.22),transparent)]" />
             <Bell size={15} />
           </button>
         </div>

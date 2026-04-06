@@ -79,6 +79,36 @@ textarea {
   }
 }
 
+@keyframes status-scan-travel {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.82);
+  }
+  12% {
+    opacity: 0.95;
+    transform: translateY(18px) scale(1);
+  }
+  82% {
+    opacity: 0.9;
+    transform: translateY(188px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(214px) scale(0.84);
+  }
+}
+
+@keyframes status-hint-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .lineage-node {
   will-change: transform, background-color;
 }
@@ -102,4 +132,15 @@ textarea {
 
 .lineage-spine-pulse {
   animation: lineage-path-glide 7.2s ease-in-out infinite;
+}
+
+.status-scan-bead {
+  animation: status-scan-travel 9.8s linear infinite;
+  box-shadow:
+    0 0 18px rgba(201, 244, 160, 0.3),
+    0 0 34px rgba(201, 244, 160, 0.12);
+}
+
+.status-hint-enter {
+  animation: status-hint-fade 180ms ease-out;
 }
