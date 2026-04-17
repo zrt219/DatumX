@@ -117,7 +117,7 @@ export function Sidebar({ active, onChange }: { active: NavKey; onChange: (key: 
       <div className="relative mt-8 overflow-hidden rounded-[20px] border border-white/[0.06] bg-[radial-gradient(circle_at_top_right,rgba(201,244,160,0.09),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.018))] p-4.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
         <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(201,244,160,0.42),transparent)]" />
         <div className="flex items-center justify-between gap-3">
-          <div className="space-y-1">
+          <div className="space-y-1 pl-[1px]">
             <p className="text-[10px] uppercase tracking-[0.26em] text-chrome/80">System Status</p>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Protocol posture nominal</p>
           </div>
@@ -140,7 +140,7 @@ export function Sidebar({ active, onChange }: { active: NavKey; onChange: (key: 
                 >
                   <span className="pointer-events-none absolute -left-[15px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-[#0f151d] bg-[#0f151d] shadow-[0_0_0_2px_rgba(255,255,255,0.03)]" />
                   <span className={`pointer-events-none absolute -left-[13px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full ${row.tone}`} />
-                  <span className="uppercase tracking-[0.14em] text-slate-500 transition group-hover:text-slate-400">{row.label}</span>
+                  <span className="pl-[1px] uppercase tracking-[0.14em] text-slate-500 transition group-hover:text-slate-400">{row.label}</span>
                   <span className="ml-auto flex items-center gap-2">
                     <span className={`text-right font-medium ${row.valueClass}`}>{row.value}</span>
                     <ChevronDown
@@ -156,7 +156,7 @@ export function Sidebar({ active, onChange }: { active: NavKey; onChange: (key: 
                 <div className="group relative flex items-center justify-between gap-3 rounded-[12px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.026),rgba(0,0,0,0.08))] px-3 py-2.5 text-[12px] leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition duration-200 hover:border-white/[0.08] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.034),rgba(0,0,0,0.1))]">
                   <span className="pointer-events-none absolute -left-[15px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-[#0f151d] bg-[#0f151d] shadow-[0_0_0_2px_rgba(255,255,255,0.03)]" />
                   <span className={`pointer-events-none absolute -left-[13px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full ${row.tone}`} />
-                  <span className="uppercase tracking-[0.14em] text-slate-500 transition group-hover:text-slate-400">{row.label}</span>
+                  <span className="pl-[1px] uppercase tracking-[0.14em] text-slate-500 transition group-hover:text-slate-400">{row.label}</span>
                   <span className={`text-right font-medium ${row.valueClass}`}>{row.value}</span>
                 </div>
               )}
