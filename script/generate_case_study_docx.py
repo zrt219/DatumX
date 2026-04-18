@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from docx import Document
-from docx.enum.section import WD_SECTION
+from docx.enum.section import WD_SECTION_START
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -14,52 +15,17 @@ from docx.shared import Inches, Pt, RGBColor
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_PATH = REPO_ROOT / "docs" / "datumx-case-study.md"
-OUTPUT_PATH = REPO_ROOT / "output" / "doc" / "DatumX-Case-Study.docx"
+OUTPUT_DIR = REPO_ROOT / "output" / "doc"
 LOGO_PATH = REPO_ROOT / "New folder" / "DatumX-removebg-preview.png"
 
-PRIMARY = RGBColor(33, 36, 41)
-SECONDARY = RGBColor(89, 95, 102)
-ACCENT = RGBColor(117, 97, 64)
-ACCENT_LIGHT = RGBColor(242, 237, 227)
-RULE = RGBColor(203, 195, 180)
-
-AUTHOR_NAME = "ZRT"
-AUTHOR_ROLES = "Smart Contract Engineer | Blockchain Systems Engineer | Web3 Infrastructure Engineer"
-AUTHOR_META = "Canada AB | github.com/zrt219 | linkedin.com/in/zhane-grey-987258395"
-AUTHOR_SUMMARY = (
-    "Blockchain engineer with 6 live contracts deployed across 5 networks, specializing in "
-    "production-grade Solidity and full-stack Web3 execution layers. Extensive hands-on experience "
-    "on XRPL EVM Sidechain - including reverse-engineering undocumented RPC incompatibilities "
-    "(eth_estimateGas / eth_gasPrice absent), implementing legacy tx overrides, and bypassing "
-    "Foundry simulation for non-standard EVM environments. Architects dependency-free, zero-backend "
-    "systems with forward-only state machines, per-record access control, and integer-encoded domain "
-    "values - designed to minimize attack surface and maximize auditability. Owns the full stack: "
-    "contract architecture -> security invariants -> frontend execution -> deployment tooling."
-)
-
-CALLOUTS = {
-    1: (
-        "Core Thesis",
-        "DatumX does not frame industrial data as a storage problem. It frames transformed releases as "
-        "governed analytical units that need explicit provenance, review, consensus, and closure."
-    ),
-    6: (
-        "Key Innovation",
-        "The adapter boundary is where project-specific messiness becomes canonical release structure. "
-        "That separation keeps the protocol core strict while letting each project normalize its own inputs."
-    ),
-    8: (
-        "Role Separation",
-        "Validator-only reviews and auditor-only finalization split technical judgment from release closure. "
-        "That separation is one of DatumX's strongest integrity decisions."
-    ),
-    11: (
-        "Live Proof",
-        "The XRPL EVM deployment matters because DatumX already demonstrated a live root -> child lineage path, "
-        "with thresholds restored after the fast-path exercise."
-    ),
-}
+PRIMARY = RGBColor(120, 163, 123)  # #78A37B
+SECONDARY = RGBColor(95, 127, 167)  # #5F7FA7
+TEXT = RGBColor(26, 33, 43)
+MUTED = RGBColor(96, 108, 122)
+RULE = RGBColor(198, 209, 198)
+CALLOUT_FILL = "EEF4EE"
+CODE_FILL = "F5F7F8"
+TABLE_HEADER_FILL = "E6EEE7"
 
 MOJIBAKE_REPLACEMENTS = {
     "\ufeff": "",
@@ -71,53 +37,117 @@ MOJIBAKE_REPLACEMENTS = {
     "â€": '"',
     "â€¦": "...",
     "â†’": "->",
-    "â€": '"',
-    "Â·": " | ",
-    "Â": "",
-    "—": "-",
-    "–": "-",
-    "’": "'",
-    "“": '"',
-    "”": '"',
-    "…": "...",
-    "→": "->",
-    "·": " | ",
+    "Â·": "|",
+    "Ã—": "x",
 }
+
+
+@dataclass(frozen=True)
+class DocumentConfig:
+    key: str
+    source_path: Path
+    output_path: Path
+    doc_title: str
+    cover_title: str
+    cover_subtitle: str
+    value_prop: str
+    stack_line: str
+    live_line: str
+    static_contents_title: str
+    intro_note: str
+    callouts: dict[str, tuple[str, str]]
+
+
+DOCS = [
+    DocumentConfig(
+        key="case-study",
+        source_path=REPO_ROOT / "docs" / "datumx-case-study.md",
+        output_path=OUTPUT_DIR / "DatumX-Case-Study.docx",
+        doc_title="DatumX Protocol Case Study",
+        cover_title="DatumX - Verifying AI-Transformed Exploration Data with On-Chain Provenance and Consensus Validation",
+        cover_subtitle="Long-form protocol case study",
+        value_prop=(
+            "DatumX treats transformed industrial datasets as governed analytical releases with canonical payloads, "
+            "deterministic lineage, validator consensus, and auditor-controlled finalization."
+        ),
+        stack_line="XRPL EVM Testnet | Solidity 0.8.24 | Foundry | React | Vite | TypeScript | viem",
+        live_line="Live console: https://datumx.vercel.app | Canonical ValidationModule: 0xD60BE5B6A28eAF13De6DB6e02726551304E82baf",
+        static_contents_title="Case Study Contents",
+        intro_note="Deep protocol narrative for engineers, protocol designers, technical reviewers, and investment diligence.",
+        callouts={
+            "1. Executive Summary": (
+                "Thesis",
+                "DatumX is not trying to store geology on-chain. It is defining a release-governance boundary for transformed industrial data.",
+            ),
+            "6. Adapter Model (Key Innovation)": (
+                "Typed Boundary",
+                "The adapter boundary is where local project mess becomes canonical protocol input. V5 made that boundary explicit with AdapterPayload.",
+            ),
+            "8. Validation + Consensus System": (
+                "Role Separation",
+                "Validator-only reviews and auditor-only finalization are distinct on purpose. Consensus and closure are not the same action.",
+            ),
+            "11. XRPL EVM Deployment Model": (
+                "Live Proof",
+                "DatumX has already proven root-to-child lineage on XRPL EVM Testnet and restored thresholds after each fast-path exercise.",
+            ),
+        },
+    ),
+    DocumentConfig(
+        key="executive-brief",
+        source_path=REPO_ROOT / "docs" / "datumx-executive-technical-brief.md",
+        output_path=OUTPUT_DIR / "DatumX-Executive-Technical-Brief.docx",
+        doc_title="DatumX Executive Technical Brief",
+        cover_title="DatumX - Executive Technical Brief",
+        cover_subtitle="Leadership-facing protocol and deployment briefing",
+        value_prop=(
+            "DatumX converts AI-transformed exploration data from ambiguous files into governed releases with deterministic lineage, "
+            "validator accountability, and on-chain finalization."
+        ),
+        stack_line="XRPL EVM Testnet | Solidity 0.8.24 | Foundry | React | Vite | TypeScript | viem | OpenZeppelin",
+        live_line="Live console: https://datumx.vercel.app | Canonical V5 deploy manifest: deployments/xrpl-testnet.json",
+        static_contents_title="Brief Contents",
+        intro_note="Executive-technical summary calibrated for technical C-suite, strategic partners, and Web3 investment review.",
+        callouts={
+            "Executive Summary": (
+                "Operating Claim",
+                "DatumX is valuable because it governs transformed releases, not because it stores raw data more expensively.",
+            ),
+            "Chain and Infrastructure Specifics": (
+                "XRPL Reality",
+                "The deployment posture is deliberately XRPL-aware: legacy tx mode, explicit gas posture, and explorer-state honesty.",
+            ),
+            "Engineering Principles": (
+                "Design Standard",
+                "The system favors explicit invariants, custom errors, and deterministic progression over flexible but ambiguous workflow logic.",
+            ),
+        },
+    ),
+]
 
 
 def normalize_text(text: str) -> str:
     for old, new in MOJIBAKE_REPLACEMENTS.items():
         text = text.replace(old, new)
-    text = text.replace("**", "")
-    text = text.replace("`", "")
-    return re.sub(r"\s+", " ", text).strip()
+    return text.rstrip()
 
 
-def set_paragraph_spacing(paragraph, before: int = 0, after: int = 0, line: float | None = None) -> None:
-    fmt = paragraph.paragraph_format
-    fmt.space_before = Pt(before)
-    fmt.space_after = Pt(after)
-    if line is not None:
-        fmt.line_spacing = line
+def strip_markdown_inline(text: str) -> str:
+    text = normalize_text(text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"\*([^*]+)\*", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", text)
+    return text.strip()
 
 
 def set_section_margins(section) -> None:
     section.page_width = Inches(8.5)
     section.page_height = Inches(11)
-    section.top_margin = Inches(0.8)
-    section.bottom_margin = Inches(0.7)
-    section.left_margin = Inches(0.95)
-    section.right_margin = Inches(0.95)
-
-
-def add_run(paragraph, text: str, *, font_name: str, size: float, bold: bool = False, italic: bool = False, color=PRIMARY):
-    run = paragraph.add_run(text)
-    run.font.name = font_name
-    run.font.size = Pt(size)
-    run.font.bold = bold
-    run.font.italic = italic
-    run.font.color.rgb = color
-    return run
+    section.top_margin = Inches(1)
+    section.bottom_margin = Inches(1)
+    section.left_margin = Inches(1)
+    section.right_margin = Inches(1)
 
 
 def ensure_style(document: Document, name: str, style_type: WD_STYLE_TYPE):
@@ -129,53 +159,89 @@ def ensure_style(document: Document, name: str, style_type: WD_STYLE_TYPE):
 
 def configure_styles(document: Document) -> None:
     normal = document.styles["Normal"]
-    normal.font.name = "Georgia"
-    normal.font.size = Pt(11.25)
-    normal.font.color.rgb = PRIMARY
-    normal.paragraph_format.space_after = Pt(8)
+    normal.font.name = "Arial"
+    normal.font.size = Pt(10.5)
+    normal.font.color.rgb = TEXT
+    normal.paragraph_format.space_after = Pt(7)
     normal.paragraph_format.line_spacing = 1.18
 
     body = ensure_style(document, "DatumX Body", WD_STYLE_TYPE.PARAGRAPH)
     body.base_style = normal
-    body.font.name = "Georgia"
-    body.font.size = Pt(11.25)
-    body.font.color.rgb = PRIMARY
-    body.paragraph_format.space_after = Pt(8)
+    body.font.name = "Arial"
+    body.font.size = Pt(10.5)
+    body.font.color.rgb = TEXT
+    body.paragraph_format.space_after = Pt(7)
     body.paragraph_format.line_spacing = 1.18
 
     label = ensure_style(document, "DatumX Label", WD_STYLE_TYPE.PARAGRAPH)
     label.base_style = normal
-    label.font.name = "Aptos"
+    label.font.name = "Courier New"
     label.font.size = Pt(8.5)
     label.font.bold = True
-    label.font.color.rgb = ACCENT
+    label.font.color.rgb = PRIMARY
     label.paragraph_format.space_after = Pt(3)
 
     section_title = ensure_style(document, "DatumX Section Title", WD_STYLE_TYPE.PARAGRAPH)
     section_title.base_style = normal
-    section_title.font.name = "Aptos Display"
-    section_title.font.size = Pt(18)
+    section_title.font.name = "Courier New"
+    section_title.font.size = Pt(14)
     section_title.font.bold = True
-    section_title.font.color.rgb = PRIMARY
-    section_title.paragraph_format.space_before = Pt(0)
-    section_title.paragraph_format.space_after = Pt(8)
+    section_title.font.color.rgb = TEXT
+    section_title.paragraph_format.space_before = Pt(6)
+    section_title.paragraph_format.space_after = Pt(6)
     section_title.paragraph_format.keep_with_next = True
 
-    small = ensure_style(document, "DatumX Small", WD_STYLE_TYPE.PARAGRAPH)
-    small.base_style = normal
-    small.font.name = "Aptos"
-    small.font.size = Pt(9.5)
-    small.font.color.rgb = SECONDARY
-    small.paragraph_format.space_after = Pt(4)
+    subsection = ensure_style(document, "DatumX Subsection", WD_STYLE_TYPE.PARAGRAPH)
+    subsection.base_style = normal
+    subsection.font.name = "Courier New"
+    subsection.font.size = Pt(11)
+    subsection.font.bold = True
+    subsection.font.color.rgb = SECONDARY
+    subsection.paragraph_format.space_before = Pt(4)
+    subsection.paragraph_format.space_after = Pt(4)
+    subsection.paragraph_format.keep_with_next = True
+
+    meta = ensure_style(document, "DatumX Meta", WD_STYLE_TYPE.PARAGRAPH)
+    meta.base_style = normal
+    meta.font.name = "Courier New"
+    meta.font.size = Pt(9)
+    meta.font.color.rgb = MUTED
+    meta.paragraph_format.space_after = Pt(4)
 
     callout = ensure_style(document, "DatumX Callout", WD_STYLE_TYPE.PARAGRAPH)
     callout.base_style = normal
-    callout.font.name = "Georgia"
-    callout.font.size = Pt(12)
+    callout.font.name = "Arial"
+    callout.font.size = Pt(10.5)
     callout.font.italic = True
-    callout.font.color.rgb = PRIMARY
-    callout.paragraph_format.space_after = Pt(3)
+    callout.font.color.rgb = TEXT
+    callout.paragraph_format.space_after = Pt(4)
     callout.paragraph_format.line_spacing = 1.15
+
+    code = ensure_style(document, "DatumX Code", WD_STYLE_TYPE.PARAGRAPH)
+    code.base_style = normal
+    code.font.name = "Courier New"
+    code.font.size = Pt(9)
+    code.font.color.rgb = TEXT
+    code.paragraph_format.space_after = Pt(4)
+    code.paragraph_format.line_spacing = 1.0
+
+
+def set_paragraph_spacing(paragraph, before: int = 0, after: int = 0, line: float | None = None) -> None:
+    fmt = paragraph.paragraph_format
+    fmt.space_before = Pt(before)
+    fmt.space_after = Pt(after)
+    if line is not None:
+        fmt.line_spacing = line
+
+
+def add_run(paragraph, text: str, *, font_name: str, size: float, bold: bool = False, italic: bool = False, color: RGBColor = TEXT):
+    run = paragraph.add_run(text)
+    run.font.name = font_name
+    run.font.size = Pt(size)
+    run.font.bold = bold
+    run.font.italic = italic
+    run.font.color.rgb = color
+    return run
 
 
 def set_cell_shading(cell, fill: str) -> None:
@@ -187,7 +253,7 @@ def set_cell_shading(cell, fill: str) -> None:
     shd.set(qn("w:fill"), fill)
 
 
-def set_cell_border(cell, color: str = "CBC3B4", size: str = "8") -> None:
+def set_cell_border(cell, color: str = "C6D1C6", size: str = "8") -> None:
     tc_pr = cell._tc.get_or_add_tcPr()
     borders = tc_pr.find(qn("w:tcBorders"))
     if borders is None:
@@ -204,7 +270,7 @@ def set_cell_border(cell, color: str = "CBC3B4", size: str = "8") -> None:
         element.set(qn("w:color"), color)
 
 
-def set_paragraph_border(paragraph, edge: str = "bottom", color: str = "CBC3B4", size: str = "10") -> None:
+def set_paragraph_border(paragraph, edge: str = "bottom", color: str = "C6D1C6", size: str = "10") -> None:
     p_pr = paragraph._p.get_or_add_pPr()
     p_bdr = p_pr.find(qn("w:pBdr"))
     if p_bdr is None:
@@ -234,423 +300,313 @@ def add_page_field(paragraph) -> None:
     run._r.append(fld_end)
 
 
-def add_toc_field(paragraph) -> None:
-    begin = OxmlElement("w:fldChar")
-    begin.set(qn("w:fldCharType"), "begin")
-    instr = OxmlElement("w:instrText")
-    instr.set(qn("xml:space"), "preserve")
-    instr.text = ' TOC \\o "1-2" \\h \\z \\u '
-    separate = OxmlElement("w:fldChar")
-    separate.set(qn("w:fldCharType"), "separate")
-    placeholder = OxmlElement("w:t")
-    placeholder.text = "Update table of contents in Word to refresh page references."
-    placeholder_run = OxmlElement("w:r")
-    placeholder_run.append(placeholder)
-    end = OxmlElement("w:fldChar")
-    end.set(qn("w:fldCharType"), "end")
-    paragraph._p.append(begin)
-    paragraph._p.append(instr)
-    paragraph._p.append(separate)
-    paragraph._p.append(placeholder_run)
-    paragraph._p.append(end)
-
-
-def extract_sections(markdown_text: str) -> list[tuple[int, str]]:
-    sections: list[tuple[int, str]] = []
-    for raw_line in markdown_text.splitlines():
-        line = normalize_text(raw_line)
-        if not line.startswith("## "):
-            continue
-        match = re.match(r"^(\d+)\.\s+(.*)$", line[3:])
-        if match:
-            sections.append((int(match.group(1)), match.group(2)))
-    return sections
-
-
-def set_page_number_start(section, start: int) -> None:
-    sect_pr = section._sectPr
-    pg_num = sect_pr.find(qn("w:pgNumType"))
-    if pg_num is None:
-        pg_num = OxmlElement("w:pgNumType")
-        sect_pr.append(pg_num)
-    pg_num.set(qn("w:start"), str(start))
-
-
-def configure_header_footer(section) -> None:
+def configure_header_footer(section, title: str) -> None:
     section.header.is_linked_to_previous = False
     section.footer.is_linked_to_previous = False
 
     header = section.header.paragraphs[0]
     header.alignment = WD_ALIGN_PARAGRAPH.CENTER
     header.clear()
-    add_run(header, "DATUMX PROTOCOL CASE STUDY", font_name="Aptos", size=8.5, bold=True, color=SECONDARY)
+    add_run(header, title.upper(), font_name="Courier New", size=8, bold=True, color=MUTED)
     set_paragraph_spacing(header, after=0)
 
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     footer.clear()
-    add_run(footer, "Page ", font_name="Aptos", size=9, color=SECONDARY)
+    add_run(footer, f"{title} | Page ", font_name="Courier New", size=8.5, color=MUTED)
     add_page_field(footer)
     set_paragraph_spacing(footer, after=0)
 
 
-def add_cover_page(document: Document) -> None:
+def add_cover_page(document: Document, config: DocumentConfig) -> None:
     if LOGO_PATH.exists():
         logo = document.add_paragraph()
         logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
         logo_run = logo.add_run()
-        logo_run.add_picture(str(LOGO_PATH), width=Inches(1.85))
-        set_paragraph_spacing(logo, before=10, after=10)
+        logo_run.add_picture(str(LOGO_PATH), width=Inches(1.2))
+        set_paragraph_spacing(logo, before=6, after=8)
 
     label = document.add_paragraph(style="DatumX Label")
     label.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    add_run(label, "PROTOCOL DOSSIER", font_name="Aptos", size=9, bold=True, color=ACCENT)
+    add_run(label, "DATUMX PROTOCOL DOSSIER", font_name="Courier New", size=9, bold=True, color=PRIMARY)
 
     title = document.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    add_run(
-        title,
-        "DatumX - Verifying AI-Transformed Exploration Data with On-Chain Provenance and Consensus Validation",
-        font_name="Aptos Display",
-        size=24,
-        bold=True,
-        color=PRIMARY,
-    )
-    set_paragraph_spacing(title, before=42, after=12, line=1.02)
+    add_run(title, config.cover_title, font_name="Courier New", size=21, bold=True, color=TEXT)
+    set_paragraph_spacing(title, before=18, after=8, line=1.08)
 
     subtitle = document.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    add_run(
-        subtitle,
-        "A technical case study on trusted transformed industrial datasets, canonical payload design, "
-        "deterministic lineage, validator review, and XRPL EVM deployment realities.",
-        font_name="Georgia",
-        size=12,
-        italic=True,
-        color=SECONDARY,
-    )
-    set_paragraph_spacing(subtitle, after=18, line=1.15)
+    add_run(subtitle, config.cover_subtitle, font_name="Arial", size=12, italic=True, color=MUTED)
+    set_paragraph_spacing(subtitle, after=18)
 
-    motif = document.add_table(rows=1, cols=1)
-    motif.alignment = WD_TABLE_ALIGNMENT.CENTER
-    motif.autofit = False
-    motif.columns[0].width = Inches(3.8)
-    motif_cell = motif.cell(0, 0)
-    set_cell_shading(motif_cell, "F8F4EC")
-    set_cell_border(motif_cell, color="B99D72", size="12")
-    motif_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    motif_text = motif_cell.paragraphs[0]
-    motif_text.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    add_run(motif_text, "CANONICAL PAYLOADS | DETERMINISTIC LINEAGE | CONSENSUS VALIDATION", font_name="Aptos", size=8.8, bold=True, color=ACCENT)
-    set_paragraph_spacing(motif_text, before=5, after=5)
+    value = document.add_paragraph()
+    value.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    add_run(value, config.value_prop, font_name="Arial", size=11.5, color=TEXT)
+    set_paragraph_spacing(value, after=14, line=1.18)
 
-    band = document.add_table(rows=1, cols=1)
-    band.alignment = WD_TABLE_ALIGNMENT.CENTER
-    band.autofit = True
-    cell = band.cell(0, 0)
-    set_cell_shading(cell, "F2EDE3")
-    set_cell_border(cell, color="C2B59B", size="10")
-    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    meta = cell.paragraphs[0]
-    meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    add_run(meta, "DatumX Protocol | Built by ZRT | XRPL EVM Testnet", font_name="Aptos", size=10.5, bold=True, color=PRIMARY)
-    set_paragraph_spacing(meta, before=6, after=6)
+    meta = document.add_table(rows=4, cols=2)
+    meta.alignment = WD_TABLE_ALIGNMENT.CENTER
+    meta.autofit = True
+    labels = ["STACK", "LIVE", "PALETTE", "FORMAT"]
+    values = [
+        config.stack_line,
+        config.live_line,
+        "Primary #78A37B | Secondary #5F7FA7 | Callout fill #EEF4EE",
+        "US Letter | 1 inch margins | Courier New headings | Arial body",
+    ]
+    for idx, (label_text, value_text) in enumerate(zip(labels, values, strict=True)):
+        left = meta.cell(idx, 0)
+        right = meta.cell(idx, 1)
+        set_cell_shading(left, CALLOUT_FILL)
+        set_cell_shading(right, "FFFFFF")
+        set_cell_border(left)
+        set_cell_border(right)
+        left.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        right.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        left.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        right.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+        add_run(left.paragraphs[0], label_text, font_name="Courier New", size=8.5, bold=True, color=PRIMARY)
+        add_run(right.paragraphs[0], value_text, font_name="Arial", size=10, color=TEXT)
 
-    intro = document.add_paragraph()
-    intro.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    add_run(
-        intro,
-        "This document presents DatumX as infrastructure for proving that AI-transformed industrial releases "
-        "are reviewable, traceable, and decision-worthy after multiple computational and human interventions.",
-        font_name="Georgia",
-        size=11.5,
-        color=PRIMARY,
-    )
-    set_paragraph_spacing(intro, before=22, after=0, line=1.2)
+    note = document.add_paragraph(style="DatumX Meta")
+    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    add_run(note, config.intro_note, font_name="Arial", size=10, italic=True, color=MUTED)
+    set_paragraph_spacing(note, before=14, after=0)
 
 
-def add_author_profile_page(document: Document) -> None:
-    label = document.add_paragraph(style="DatumX Label")
-    add_run(label, "BUILDER PROFILE", font_name="Aptos", size=9, bold=True, color=ACCENT)
-    set_paragraph_spacing(label, before=8, after=3)
+def parse_markdown(text: str) -> list[tuple[str, object]]:
+    lines = [normalize_text(line) for line in text.splitlines()]
+    blocks: list[tuple[str, object]] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped:
+            i += 1
+            continue
 
-    name = document.add_paragraph()
-    add_run(name, AUTHOR_NAME, font_name="Aptos Display", size=22, bold=True, color=PRIMARY)
-    set_paragraph_spacing(name, after=3)
+        if stripped.startswith("```"):
+            fence_lines = []
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                fence_lines.append(lines[i])
+                i += 1
+            blocks.append(("code", "\n".join(fence_lines).strip("\n")))
+            i += 1
+            continue
 
-    roles = document.add_paragraph(style="DatumX Small")
-    add_run(roles, AUTHOR_ROLES, font_name="Aptos", size=10.5, bold=True, color=SECONDARY)
-    set_paragraph_spacing(roles, after=4)
+        heading_match = re.match(r"^(#{1,6})\s+(.*)$", stripped)
+        if heading_match:
+            level = len(heading_match.group(1))
+            blocks.append(("heading", (level, strip_markdown_inline(heading_match.group(2)))))
+            i += 1
+            continue
 
-    meta = document.add_paragraph(style="DatumX Small")
-    add_run(meta, AUTHOR_META, font_name="Aptos", size=10, color=SECONDARY)
-    set_paragraph_spacing(meta, after=14)
+        if stripped.startswith(">"):
+            quote_lines = []
+            while i < len(lines) and lines[i].strip().startswith(">"):
+                quote_lines.append(strip_markdown_inline(lines[i].strip()[1:].strip()))
+                i += 1
+            blocks.append(("blockquote", " ".join(quote_lines)))
+            continue
 
-    summary_label = document.add_paragraph(style="DatumX Label")
-    add_run(summary_label, "SUMMARY", font_name="Aptos", size=9, bold=True, color=ACCENT)
-    set_paragraph_spacing(summary_label, after=4)
+        if stripped.startswith("|"):
+            table_lines = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                table_lines.append(lines[i].strip())
+                i += 1
+            rows = []
+            for raw in table_lines:
+                cells = [strip_markdown_inline(cell) for cell in raw.strip("|").split("|")]
+                rows.append(cells)
+            if len(rows) >= 2 and all(re.fullmatch(r":?-{3,}:?", cell.replace(" ", "")) for cell in rows[1]):
+                rows.pop(1)
+            blocks.append(("table", rows))
+            continue
 
-    table = document.add_table(rows=1, cols=1)
-    table.alignment = WD_TABLE_ALIGNMENT.LEFT
-    table.autofit = True
-    cell = table.cell(0, 0)
-    set_cell_shading(cell, "F7F5F0")
-    set_cell_border(cell, color="D4CCBF", size="10")
-    cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
-    paragraph = cell.paragraphs[0]
-    paragraph.style = document.styles["DatumX Body"]
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    add_run(paragraph, AUTHOR_SUMMARY, font_name="Georgia", size=11.25, color=PRIMARY)
-    set_paragraph_spacing(paragraph, before=10, after=10, line=1.18)
+        if re.match(r"^(-|\*)\s+", stripped) or re.match(r"^\d+\.\s+", stripped):
+            items = []
+            ordered = False
+            while i < len(lines):
+                candidate = lines[i].strip()
+                if re.match(r"^(-|\*)\s+", candidate):
+                    items.append(strip_markdown_inline(re.sub(r"^(-|\*)\s+", "", candidate)))
+                    i += 1
+                    continue
+                match = re.match(r"^(\d+)\.\s+(.*)$", candidate)
+                if match:
+                    ordered = True
+                    items.append(strip_markdown_inline(match.group(2)))
+                    i += 1
+                    continue
+                break
+            blocks.append(("list", (ordered, items)))
+            continue
+
+        paragraph_lines = []
+        while i < len(lines):
+            candidate = lines[i].strip()
+            if not candidate:
+                break
+            if candidate.startswith(("```", ">", "|")) or re.match(r"^(#{1,6})\s+", candidate):
+                break
+            if re.match(r"^(-|\*)\s+", candidate) or re.match(r"^\d+\.\s+", candidate):
+                break
+            paragraph_lines.append(strip_markdown_inline(candidate))
+            i += 1
+        blocks.append(("paragraph", " ".join(paragraph_lines)))
+    return blocks
 
 
-def add_contents_page(document: Document, sections: list[tuple[int, str]]) -> None:
+def add_static_contents(document: Document, config: DocumentConfig, headings: list[str]) -> None:
     heading = document.add_paragraph(style="DatumX Section Title")
-    add_run(heading, "Contents", font_name="Aptos Display", size=18, bold=True, color=PRIMARY)
-    set_paragraph_spacing(heading, after=6)
+    add_run(heading, config.static_contents_title, font_name="Courier New", size=14, bold=True, color=TEXT)
     set_paragraph_border(heading, edge="bottom")
 
-    note = document.add_paragraph(style="DatumX Small")
-    add_run(note, "Structured section map for the DatumX protocol dossier.", font_name="Aptos", size=9.5, italic=True, color=SECONDARY)
-    set_paragraph_spacing(note, after=10)
+    note = document.add_paragraph(style="DatumX Meta")
+    add_run(note, "Static contents generated from the Markdown source headings.", font_name="Arial", size=9.5, italic=True, color=MUTED)
 
     table = document.add_table(rows=1, cols=2)
     table.alignment = WD_TABLE_ALIGNMENT.LEFT
-    table.autofit = True
-    headers = table.rows[0].cells
-    for idx, text in enumerate(["Section", "Topic"]):
-        set_cell_shading(headers[idx], "EFE8DA")
-        set_cell_border(headers[idx], color="C4B89F", size="10")
-        p = headers[idx].paragraphs[0]
-        add_run(p, text, font_name="Aptos", size=9.5, bold=True, color=PRIMARY)
-        set_paragraph_spacing(p, before=3, after=3)
+    header_cells = table.rows[0].cells
+    set_cell_shading(header_cells[0], TABLE_HEADER_FILL)
+    set_cell_shading(header_cells[1], TABLE_HEADER_FILL)
+    set_cell_border(header_cells[0])
+    set_cell_border(header_cells[1])
+    add_run(header_cells[0].paragraphs[0], "#", font_name="Courier New", size=8.5, bold=True, color=PRIMARY)
+    add_run(header_cells[1].paragraphs[0], "Section", font_name="Courier New", size=8.5, bold=True, color=PRIMARY)
 
-    for number, title in sections:
+    for idx, title in enumerate(headings, start=1):
         row = table.add_row().cells
-        set_cell_border(row[0], color="D4CCBF", size="8")
-        set_cell_border(row[1], color="D4CCBF", size="8")
-        p0 = row[0].paragraphs[0]
-        add_run(p0, f"{number:02d}", font_name="Aptos", size=10.5, bold=True, color=ACCENT)
-        set_paragraph_spacing(p0, before=3, after=3)
-        p1 = row[1].paragraphs[0]
-        add_run(p1, title, font_name="Georgia", size=10.8, color=PRIMARY)
-        set_paragraph_spacing(p1, before=3, after=3, line=1.08)
-
-    spacer = document.add_paragraph()
-    set_paragraph_spacing(spacer, after=4)
+        set_cell_border(row[0])
+        set_cell_border(row[1])
+        add_run(row[0].paragraphs[0], str(idx), font_name="Courier New", size=8.5, bold=True, color=TEXT)
+        add_run(row[1].paragraphs[0], title, font_name="Arial", size=10, color=TEXT)
 
 
-def add_protocol_diagram_page(document: Document) -> None:
-    label = document.add_paragraph(style="DatumX Label")
-    add_run(label, "PROTOCOL SCHEMA", font_name="Aptos", size=9, bold=True, color=ACCENT)
-    set_paragraph_spacing(label, before=8, after=2)
-
-    title = document.add_paragraph(style="DatumX Section Title")
-    add_run(title, "How a transformed release becomes decision-grade", font_name="Aptos Display", size=18, bold=True, color=PRIMARY)
-    set_paragraph_spacing(title, after=8)
-    set_paragraph_border(title, edge="bottom")
-
-    intro = document.add_paragraph(style="DatumX Small")
-    add_run(
-        intro,
-        "The protocol separates normalization, registration, review, and closure so each release passes through an explicit trust boundary before downstream use.",
-        font_name="Aptos",
-        size=9.8,
-        color=SECONDARY,
-    )
-    set_paragraph_spacing(intro, after=12, line=1.12)
-
-    add_visual_table(
-        document,
-        "Release pathway",
-        ["Phase", "Protocol Action", "Trust Outcome"],
-        [
-            ["1. Adapter normalization", "Project adapter receives typed payload and emits canonical dataset input.", "Project-specific messiness is constrained before entering the core registry."],
-            ["2. Canonical registration", "Router forwards normalized release into DatasetRegistry.", "The release gets a durable identity, project binding, and lineage anchor."],
-            ["3. Validator review", "Assigned validators submit approval and confidence judgments.", "Consensus becomes explicit instead of implied by operator workflow."],
-            ["4. Auditor finalization", "Auditor closes only approved releases that still satisfy thresholds.", "The dataset becomes decision-grade and eligible to parent the next stage."],
-        ],
-    )
-
-    add_visual_table(
-        document,
-        "Operational lanes",
-        ["Lane", "Primary Components", "Why It Matters"],
-        [
-            ["Normalization", "Adapters + ProjectRouter", "Keeps domain-specific input rules out of the canonical registry core."],
-            ["Integrity", "DatasetRegistry + DatasetGraph", "Enforces duplicate protection, finalized-parent rules, and no-branch lineage."],
-            ["Consensus", "ValidationModule + Access roles", "Separates validator judgment from auditor-controlled release closure."],
-        ],
-    )
-
-
-def add_callout(document: Document, label_text: str, body_text: str) -> None:
+def add_callout(document: Document, label: str, text: str) -> None:
     table = document.add_table(rows=1, cols=1)
     table.alignment = WD_TABLE_ALIGNMENT.LEFT
-    table.autofit = True
     cell = table.cell(0, 0)
-    set_cell_shading(cell, "F5F1E8")
-    set_cell_border(cell, color="BCA98A", size="12")
-    cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
-
-    label = cell.paragraphs[0]
-    add_run(label, label_text.upper(), font_name="Aptos", size=8.5, bold=True, color=ACCENT)
-    set_paragraph_spacing(label, before=6, after=2)
-
+    set_cell_shading(cell, CALLOUT_FILL)
+    set_cell_border(cell)
+    label_paragraph = cell.paragraphs[0]
+    add_run(label_paragraph, label.upper(), font_name="Courier New", size=8.5, bold=True, color=PRIMARY)
     body = cell.add_paragraph(style="DatumX Callout")
-    add_run(body, body_text, font_name="Georgia", size=12, italic=True, color=PRIMARY)
-    set_paragraph_spacing(body, after=8, line=1.12)
-
-    spacer = document.add_paragraph()
-    set_paragraph_spacing(spacer, after=4)
+    add_run(body, text, font_name="Arial", size=10.5, italic=True, color=TEXT)
+    set_paragraph_spacing(body, before=1, after=4, line=1.14)
 
 
-def add_visual_table(document: Document, title_text: str, columns: list[str], rows: list[list[str]]) -> None:
-    label = document.add_paragraph(style="DatumX Label")
-    add_run(label, title_text.upper(), font_name="Aptos", size=8.5, bold=True, color=ACCENT)
-    set_paragraph_spacing(label, before=6, after=4)
+def render_blocks(document: Document, config: DocumentConfig, blocks: list[tuple[str, object]]) -> None:
+    first_h1_consumed = False
+    for kind, payload in blocks:
+        if kind == "heading":
+            level, text = payload  # type: ignore[misc]
+            if level == 1 and not first_h1_consumed:
+                first_h1_consumed = True
+                continue
+            if level == 2:
+                heading = document.add_paragraph(style="DatumX Section Title")
+                add_run(heading, text, font_name="Courier New", size=14, bold=True, color=TEXT)
+                set_paragraph_border(heading, edge="bottom")
+                if text in config.callouts:
+                    label, callout_text = config.callouts[text]
+                    add_callout(document, label, callout_text)
+            elif level == 3:
+                paragraph = document.add_paragraph(style="DatumX Subsection")
+                add_run(paragraph, text, font_name="Courier New", size=11, bold=True, color=SECONDARY)
+            else:
+                paragraph = document.add_paragraph(style="DatumX Meta")
+                add_run(paragraph, text, font_name="Courier New", size=9.5, bold=True, color=MUTED)
+            continue
 
-    table = document.add_table(rows=1, cols=len(columns))
-    table.alignment = WD_TABLE_ALIGNMENT.LEFT
-    table.style = "Table Grid"
-    table.autofit = True
+        if kind == "paragraph":
+            paragraph = document.add_paragraph(style="DatumX Body")
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            add_run(paragraph, payload, font_name="Arial", size=10.5, color=TEXT)
+            set_paragraph_spacing(paragraph, after=7, line=1.18)
+            continue
 
-    header_cells = table.rows[0].cells
-    for index, column in enumerate(columns):
-        cell = header_cells[index]
-        set_cell_shading(cell, "EFE8DA")
-        set_cell_border(cell, color="C4B89F", size="10")
-        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-        paragraph = cell.paragraphs[0]
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        add_run(paragraph, column, font_name="Aptos", size=9.5, bold=True, color=PRIMARY)
-        set_paragraph_spacing(paragraph, before=3, after=3)
+        if kind == "blockquote":
+            add_callout(document, "Companion", str(payload))
+            continue
 
-    for row_values in rows:
-        row = table.add_row().cells
-        for index, value in enumerate(row_values):
-            cell = row[index]
-            set_cell_border(cell, color="D4CCBF", size="8")
-            cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+        if kind == "list":
+            ordered, items = payload  # type: ignore[misc]
+            for idx, item in enumerate(items, start=1):
+                paragraph = document.add_paragraph(style="DatumX Body")
+                paragraph.paragraph_format.left_indent = Inches(0.22)
+                marker = f"{idx}. " if ordered else "- "
+                add_run(paragraph, marker, font_name="Courier New", size=9.5, bold=True, color=PRIMARY)
+                add_run(paragraph, item, font_name="Arial", size=10.5, color=TEXT)
+                set_paragraph_spacing(paragraph, after=4, line=1.14)
+            continue
+
+        if kind == "code":
+            table = document.add_table(rows=1, cols=1)
+            table.alignment = WD_TABLE_ALIGNMENT.LEFT
+            cell = table.cell(0, 0)
+            set_cell_shading(cell, CODE_FILL)
+            set_cell_border(cell, color="D7DEE2")
             paragraph = cell.paragraphs[0]
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            add_run(paragraph, value, font_name="Georgia", size=10.5, color=PRIMARY)
-            set_paragraph_spacing(paragraph, before=3, after=3, line=1.08)
+            paragraph.style = document.styles["DatumX Code"]
+            add_run(paragraph, str(payload), font_name="Courier New", size=8.8, color=TEXT)
+            set_paragraph_spacing(paragraph, before=5, after=5, line=1.0)
+            continue
 
-    spacer = document.add_paragraph()
-    set_paragraph_spacing(spacer, after=8)
-
-
-def add_section_heading(document: Document, heading_text: str) -> int | None:
-    match = re.match(r"^(\d+)\.\s+(.*)$", heading_text)
-    section_number = int(match.group(1)) if match else None
-    section_title = match.group(2) if match else heading_text
-
-    if section_number is not None:
-        label = document.add_paragraph(style="DatumX Label")
-        add_run(label, f"SECTION {section_number:02d}", font_name="Aptos", size=8.5, bold=True, color=ACCENT)
-        set_paragraph_spacing(label, before=16, after=2)
-
-    title = document.add_paragraph(style="DatumX Section Title")
-    add_run(title, section_title, font_name="Aptos Display", size=18, bold=True, color=PRIMARY)
-    set_paragraph_spacing(title, after=8)
-    set_paragraph_border(title, edge="bottom")
-    return section_number
-
-
-def add_body_paragraph(document: Document, text: str) -> None:
-    paragraph = document.add_paragraph(style="DatumX Body")
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    add_run(paragraph, text, font_name="Georgia", size=11.25, color=PRIMARY)
-    set_paragraph_spacing(paragraph, after=8, line=1.18)
+        if kind == "table":
+            rows = payload  # type: ignore[assignment]
+            if not rows:
+                continue
+            table = document.add_table(rows=len(rows), cols=len(rows[0]))
+            table.alignment = WD_TABLE_ALIGNMENT.LEFT
+            table.style = "Table Grid"
+            for row_idx, row_values in enumerate(rows):
+                for col_idx, value in enumerate(row_values):
+                    cell = table.cell(row_idx, col_idx)
+                    set_cell_border(cell)
+                    if row_idx == 0:
+                        set_cell_shading(cell, TABLE_HEADER_FILL)
+                    cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+                    paragraph = cell.paragraphs[0]
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    font = "Courier New" if row_idx == 0 else "Arial"
+                    size = 8.5 if row_idx == 0 else 9.5
+                    add_run(paragraph, value, font_name=font, size=size, bold=row_idx == 0, color=TEXT)
+                    set_paragraph_spacing(paragraph, before=2, after=2, line=1.08)
 
 
-def add_markdown_list(document: Document, text: str, numbered: bool) -> None:
-    style_name = "List Number" if numbered else "List Bullet"
-    paragraph = document.add_paragraph(style=style_name)
-    add_run(paragraph, text, font_name="Georgia", size=11, color=PRIMARY)
-    set_paragraph_spacing(paragraph, after=4, line=1.1)
+def build_document(config: DocumentConfig) -> None:
+    raw_text = config.source_path.read_text(encoding="utf-8", errors="replace")
+    blocks = parse_markdown(raw_text)
+    headings = [payload[1] for kind, payload in blocks if kind == "heading" and payload[0] == 2]
 
-
-def add_contextual_visuals(document: Document, section_number: int) -> None:
-    if section_number == 4:
-        add_visual_table(
-            document,
-            "Architecture at a glance",
-            ["Lane", "Primary Role", "Why It Exists"],
-            [
-                ["Adapter Layer", "Normalizes project-specific submissions", "Prevents domain-specific ingestion logic from leaking into the registry core."],
-                ["Protocol Layer", "Stores canonical releases and lineage", "Defines what counts as a valid, traceable, governed dataset release."],
-                ["Validation Layer", "Captures review, confidence, and closure", "Turns technical judgment into explicit release legitimacy."],
-            ],
-        )
-    if section_number == 7:
-        add_visual_table(
-            document,
-            "Dataset lifecycle model",
-            ["Stage", "Required Gate", "Result"],
-            [
-                ["Submission", "Canonical payload accepted", "A release enters the registry with project, stage, and lineage context."],
-                ["Validation", "Validator-only reviews recorded", "Approval, rejection, and confidence become explicit and auditable."],
-                ["Finalization", "Auditor closes approved release", "The dataset becomes a finalized parent eligible for the next stage."],
-                ["Supersession", "Next-stage child is created", "Lineage remains deterministic and branch-free."],
-            ],
-        )
-
-
-def build_document(markdown_text: str) -> Document:
     document = Document()
     configure_styles(document)
-    sections = extract_sections(markdown_text)
+    set_section_margins(document.sections[0])
+    configure_header_footer(document.sections[0], config.doc_title)
 
-    cover_section = document.sections[0]
-    set_section_margins(cover_section)
-    cover_section.different_first_page_header_footer = True
-    add_cover_page(document)
+    add_cover_page(document, config)
 
-    main_section = document.add_section(WD_SECTION.NEW_PAGE)
-    set_section_margins(main_section)
-    set_page_number_start(main_section, 1)
-    configure_header_footer(main_section)
+    contents_section = document.add_section(WD_SECTION_START.NEW_PAGE)
+    set_section_margins(contents_section)
+    configure_header_footer(contents_section, config.doc_title)
+    add_static_contents(document, config, headings)
 
-    add_author_profile_page(document)
-    document.add_page_break()
-    add_contents_page(document, sections)
-    document.add_page_break()
-    add_protocol_diagram_page(document)
-    document.add_page_break()
+    body_section = document.add_section(WD_SECTION_START.NEW_PAGE)
+    set_section_margins(body_section)
+    configure_header_footer(body_section, config.doc_title)
+    render_blocks(document, config, blocks)
 
-    current_section = None
-    for raw_line in markdown_text.splitlines():
-        line = normalize_text(raw_line)
-        if not line:
-            continue
-        if line.startswith("# "):
-            continue
-        if line.startswith("## "):
-            current_section = add_section_heading(document, line[3:])
-            if current_section in CALLOUTS:
-                label_text, body_text = CALLOUTS[current_section]
-                add_callout(document, label_text, body_text)
-            add_contextual_visuals(document, current_section or 0)
-            continue
-        if re.match(r"^[-*] ", line):
-            add_markdown_list(document, line[2:].strip(), numbered=False)
-            continue
-        if re.match(r"^\d+\.\s", line):
-            add_markdown_list(document, re.sub(r"^\d+\.\s*", "", line), numbered=True)
-            continue
-        add_body_paragraph(document, line)
-
-    return document
+    config.output_path.parent.mkdir(parents=True, exist_ok=True)
+    document.save(config.output_path)
 
 
 def main() -> None:
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    markdown_text = SOURCE_PATH.read_text(encoding="utf-8")
-    document = build_document(markdown_text)
-    document.save(OUTPUT_PATH)
-    print(f"Wrote {OUTPUT_PATH}")
+    for config in DOCS:
+        build_document(config)
+        print(f"Generated: {config.output_path}")
 
 
 if __name__ == "__main__":

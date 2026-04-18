@@ -1,5 +1,7 @@
 # DatumX — Verifying AI-Transformed Exploration Data with On-Chain Provenance and Consensus Validation
 
+> Companion artifacts: [Executive Technical Brief](datumx-executive-technical-brief.md) | Generated DOCX exports in `output/doc/`
+
 ## 1. Executive Summary
 
 DatumX is a protocol for verifying the integrity of transformed industrial datasets. It is designed for workflows in which raw field information is not used directly, but is first passed through a chain of extraction, normalization, interpretation, summarization, and targeting steps before it becomes actionable. In mineral exploration, that transformation chain can include digitizing historical drill records, converting analog gamma traces into structured data, interpreting mineralized intervals, building composite summaries, and ultimately generating decision-grade targeting packages. By the time the final output is consumed, the critical question is no longer whether data exists. The critical question is whether the transformed release can be trusted.
