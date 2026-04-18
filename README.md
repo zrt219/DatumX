@@ -325,16 +325,16 @@ vercel --prod
 
 The protocol is well suited to uranium exploration programs where digitization quality is no longer the only gating issue. In that operating environment, the real risk is not whether AI can extract signal from historical logs, but whether the transformed release that reaches technical review can still be defended. DatumX answers that risk with typed payload normalization, deterministic lineage, validator consensus, explicit thresholds, and auditor-only closure. That is a governance layer for decision-grade exploration data, not a generic blockchain wrapper around files.
 
-## Related Systems / Roadmap
+## On-Chain Systems Portfolio
 
-| Project or Direction | Why it matters next |
-| --- | --- |
-| ISR Network | Extends the same deterministic state-machine discipline into mission and asset tracking |
-| Reputation-weighted validators | Adds reviewer-history weighting without collapsing accountability |
-| Drill-level Merkle proofs | Pushes provenance deeper than release-level hashing |
-| Oracle-backed transform attestations | Adds stronger evidence around upstream AI/runtime provenance |
-| Governance hardening | Multisig or separated admin domains for threshold and registry changes |
-| Richer analytics surfaces | Historical confidence, rejection causes, and reviewer participation telemetry |
+| Project | Description | Status |
+|---------|-------------|--------|
+| **[ZUC Mine Command Center](https://github.com/zrt219/Zuc-Mine-Command-Center)** | On-chain uranium mining operations dashboard — real-time reserve tracking, miner registry, and contract interaction via a fully frontend-driven command interface | ✅ Live |
+| **[U235 Fuel Cycle](https://github.com/zrt219/-U235-Fuel-Cycle-)** | Nuclear fuel cycle pipeline — uranium ore to enriched fuel rod, deterministic multi-stage processing with full on-chain traceability | ✅ Live |
+| **[ISR Network](https://github.com/zrt219/ISR-Network)** | Intelligence surveillance reconnaissance system — on-chain asset tracking, mission lifecycle state machine, and role-based operator control | ✅ Live |
+| **[Dark Matter Farm](https://github.com/zrt219/Dark-Matter-Farm)** | DeFi yield protocol — experimental high-convexity farming system with custom reward mechanics and on-chain state-driven emissions | ✅ Live |
+| **[COHR LAB](https://github.com/zrt219/cohr-lab)** | Semiconductor fabrication lifecycle system — deterministic on-chain state machine tracking irreversible production stages from crystal growth to final pigtail with full auditability | ✅ Live |
+---
 
 ## Author's Note
 
