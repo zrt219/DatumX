@@ -173,6 +173,56 @@
   - `minApprovalRatioBps=6667`
   - `minConfidenceBps=7000`
 
+## Follow-Up Smoke Verification
+
+### Result
+- A fresh admin fast-path smoke run was executed against the canonical V5 deployment after the submit-review debugging pass
+- Thresholds were temporarily lowered to `minValidatorCount=1`
+- A new root->child lineage pair was created and finalized on XRPL EVM Testnet
+- Thresholds were restored to `minValidatorCount=3`, `minApprovalRatioBps=6667`, `minConfidenceBps=7000`
+- Explorer URLs for all 8 transactions are listed below for direct verification
+
+### Threshold management
+- Lower thresholds: `0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7`
+- Restore thresholds: `0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88`
+
+### Root dataset
+- Dataset ID: `7`
+- Dataset type: `RAW_SCAN_BATCH`
+- URI: `ipfs://datumx-live/xrpl/root-fastpath`
+- Content hash: `0xbdaf29cb33b307bb89806eaf444bc344e42c9b20f35a76f67b6a77016141e392`
+- Submit: `0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d`
+- Review: `0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9`
+- Finalize: `0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad`
+
+### Child dataset
+- Dataset ID: `8`
+- Dataset type: `EXTRACTED_TRACES`
+- Parent dataset ID: `7`
+- URI: `ipfs://datumx-live/xrpl/child-fastpath`
+- Content hash: `0x378a6af005942d150c989ae8d7801d7dc574139125caa00f7e2d44c834098b1f`
+- Submit: `0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6`
+- Review: `0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02`
+- Finalize: `0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8`
+
+### Verification
+- `DatasetRegistry.getParentDatasetId(8)`: `7`
+- `DatasetRegistry.getChildDatasetIds(7)`: `[8]`
+- `ValidationModule.getThresholds()` after restore:
+  - `minValidatorCount=3`
+  - `minApprovalRatioBps=6667`
+  - `minConfidenceBps=7000`
+
+### Explorer links
+- Lower thresholds: [https://explorer.testnet.xrplevm.org/tx/0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7](https://explorer.testnet.xrplevm.org/tx/0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7)
+- Root submit: [https://explorer.testnet.xrplevm.org/tx/0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d](https://explorer.testnet.xrplevm.org/tx/0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d)
+- Root review: [https://explorer.testnet.xrplevm.org/tx/0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9](https://explorer.testnet.xrplevm.org/tx/0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9)
+- Root finalize: [https://explorer.testnet.xrplevm.org/tx/0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad](https://explorer.testnet.xrplevm.org/tx/0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad)
+- Child submit: [https://explorer.testnet.xrplevm.org/tx/0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6](https://explorer.testnet.xrplevm.org/tx/0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6)
+- Child review: [https://explorer.testnet.xrplevm.org/tx/0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02](https://explorer.testnet.xrplevm.org/tx/0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02)
+- Child finalize: [https://explorer.testnet.xrplevm.org/tx/0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8](https://explorer.testnet.xrplevm.org/tx/0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8)
+- Restore thresholds: [https://explorer.testnet.xrplevm.org/tx/0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88](https://explorer.testnet.xrplevm.org/tx/0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88)
+
 ## Explorer Verification Bundle
 - Current V5 Standard JSON and constructor-argument artifacts were regenerated on `2026-04-04`.
 - Canonical bundle directory: [deployments/verification/xrpl-testnet](C:\Users\Zhane\Documents\New%20project\DatumX\deployments\verification\xrpl-testnet)

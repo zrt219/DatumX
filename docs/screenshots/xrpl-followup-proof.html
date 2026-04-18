@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DatumX XRPL Follow-Up Proof</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a1017;
+        --panel: #101823;
+        --panel-2: #131d29;
+        --line: rgba(255, 255, 255, 0.09);
+        --text: #edf2f7;
+        --muted: #98a5b3;
+        --accent: #d1b167;
+        --good: #89d2a0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        background:
+          radial-gradient(circle at top right, rgba(209, 177, 103, 0.14), transparent 30%),
+          linear-gradient(180deg, #0a1017 0%, #091019 100%);
+        color: var(--text);
+      }
+
+      .page {
+        width: 1520px;
+        margin: 0 auto;
+        padding: 56px 48px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+      }
+
+      .hero-copy {
+        padding: 32px;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 12px;
+        margin-bottom: 14px;
+      }
+
+      h1 {
+        margin: 0 0 14px;
+        font-size: 46px;
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 16px;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 24px;
+      }
+
+      .meta .item,
+      .summary .item {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px 18px;
+      }
+
+      .label {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+
+      .value {
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .summary .value {
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      .summary .ok {
+        color: var(--good);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .table-card {
+        overflow: hidden;
+      }
+
+      thead th {
+        text-align: left;
+        padding: 18px 20px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 11px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255,255,255,0.015);
+      }
+
+      tbody td {
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .mono {
+        font-family: Consolas, SFMono-Regular, monospace;
+        font-size: 13px;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(137, 210, 160, 0.28);
+        color: var(--good);
+        background: rgba(137, 210, 160, 0.08);
+        font-size: 12px;
+      }
+
+      .foot {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      a {
+        color: #cfe0ff;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero">
+        <div class="card hero-copy">
+          <div class="eyebrow">DatumX XRPL EVM Testnet</div>
+          <h1>Follow-Up Proof Run</h1>
+          <p>
+            Canonical V5 smoke verification completed on XRPL EVM Testnet after the submit-review debug pass. This run
+            exercised a fresh root-to-child lineage pair, confirmed one-review fast-path behavior, and restored quorum
+            thresholds to the canonical production-testnet baseline.
+          </p>
+        </div>
+        <div class="card meta">
+          <div class="item">
+            <div class="label">Network</div>
+            <div class="value">XRPL EVM Testnet (1449000)</div>
+          </div>
+          <div class="item">
+            <div class="label">ValidationModule</div>
+            <div class="value mono">0xD60BE5B6A28eAF13De6DB6e02726551304E82baf</div>
+          </div>
+          <div class="item">
+            <div class="label">Root Dataset</div>
+            <div class="value">DS-007</div>
+          </div>
+          <div class="item">
+            <div class="label">Child Dataset</div>
+            <div class="value">DS-008</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="summary">
+        <div class="item">
+          <div class="label">Transactions</div>
+          <div class="value">8</div>
+        </div>
+        <div class="item">
+          <div class="label">Lineage</div>
+          <div class="value">7 → 8</div>
+        </div>
+        <div class="item">
+          <div class="label">Final Thresholds</div>
+          <div class="value">3 / 6667 / 7000</div>
+        </div>
+        <div class="item">
+          <div class="label">Status</div>
+          <div class="value ok">All Confirmed</div>
+        </div>
+      </section>
+
+      <section class="card table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Tx Hash</th>
+              <th>Outcome</th>
+              <th>Explorer URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Lower thresholds</td>
+              <td class="mono">0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7">explorer.testnet.xrplevm.org/tx/0x588b…b6b7</a></td>
+            </tr>
+            <tr>
+              <td>Root submit (DS-007)</td>
+              <td class="mono">0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d">explorer.testnet.xrplevm.org/tx/0xbb55…560d</a></td>
+            </tr>
+            <tr>
+              <td>Root review</td>
+              <td class="mono">0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9">explorer.testnet.xrplevm.org/tx/0x4aff…d0d9</a></td>
+            </tr>
+            <tr>
+              <td>Root finalize</td>
+              <td class="mono">0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad">explorer.testnet.xrplevm.org/tx/0x230f…83ad</a></td>
+            </tr>
+            <tr>
+              <td>Child submit (DS-008)</td>
+              <td class="mono">0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6">explorer.testnet.xrplevm.org/tx/0xb291…d3a6</a></td>
+            </tr>
+            <tr>
+              <td>Child review</td>
+              <td class="mono">0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02">explorer.testnet.xrplevm.org/tx/0xf51c…8d02</a></td>
+            </tr>
+            <tr>
+              <td>Child finalize</td>
+              <td class="mono">0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8">explorer.testnet.xrplevm.org/tx/0xaac1…8db8</a></td>
+            </tr>
+            <tr>
+              <td>Restore thresholds</td>
+              <td class="mono">0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88</td>
+              <td><span class="pill">Confirmed</span></td>
+              <td class="mono"><a href="https://explorer.testnet.xrplevm.org/tx/0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88">explorer.testnet.xrplevm.org/tx/0x81b0…8d88</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <p class="foot">
+        Dataset verification: `getParentDatasetId(8) = 7`, `getChildDatasetIds(7) = [8]`, final thresholds restored to
+        `(3, 6667, 7000)`.
+      </p>
+    </div>
+  </body>
+</html>

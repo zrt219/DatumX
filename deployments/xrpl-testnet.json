@@ -173,5 +173,57 @@
         "minConfidenceBps": 7000
       }
     }
+  },
+  "followUpSmokeTest": {
+    "mode": "admin-fast-path",
+    "executedAt": "2026-04-18T00:17:34Z",
+    "projectKey": "SHIRLEY_CENTRAL",
+    "thresholdsBefore": {
+      "minValidatorCount": 3,
+      "minApprovalRatioBps": 6667,
+      "minConfidenceBps": 7000
+    },
+    "thresholdsDuring": {
+      "minValidatorCount": 1,
+      "minApprovalRatioBps": 6667,
+      "minConfidenceBps": 7000
+    },
+    "thresholdsAfter": {
+      "minValidatorCount": 3,
+      "minApprovalRatioBps": 6667,
+      "minConfidenceBps": 7000
+    },
+    "transactions": {
+      "lowerThresholds": "0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7",
+      "restoreThresholds": "0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88"
+    },
+    "root": {
+      "datasetId": 7,
+      "datasetType": "RAW_SCAN_BATCH",
+      "uri": "ipfs://datumx-live/xrpl/root-fastpath",
+      "contentHash": "0xbdaf29cb33b307bb89806eaf444bc344e42c9b20f35a76f67b6a77016141e392",
+      "submitTx": "0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d",
+      "reviewTx": "0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9",
+      "finalizeTx": "0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad"
+    },
+    "child": {
+      "datasetId": 8,
+      "datasetType": "EXTRACTED_TRACES",
+      "parentDatasetId": 7,
+      "uri": "ipfs://datumx-live/xrpl/child-fastpath",
+      "contentHash": "0x378a6af005942d150c989ae8d7801d7dc574139125caa00f7e2d44c834098b1f",
+      "submitTx": "0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6",
+      "reviewTx": "0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02",
+      "finalizeTx": "0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8"
+    },
+    "verification": {
+      "childParentDatasetId": 7,
+      "rootChildDatasetIds": [8],
+      "restoredThresholds": {
+        "minValidatorCount": 3,
+        "minApprovalRatioBps": 6667,
+        "minConfidenceBps": 7000
+      }
+    }
   }
 }

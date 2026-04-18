@@ -11,6 +11,7 @@ DatumX Protocol · Built by ZRT — https://github.com/zrt219
 - **2026-04-02 — V5 redeploy (canonical).** Intent: fix AdapterPayload typing boundary. Change: redeployed full stack. Outcome: canonical addresses in `deployments/xrpl-testnet.json`.
 - **2026-04-03 — Admin fast-path smoke.** Intent: prove lineage and finalization under lowered quorum. Change: thresholds dropped to 1; lineage 3→4 exercised. Outcome: finalized; thresholds restored (lower `0x56b7797abcc95b022e5007dd47d7cc5576519d5073b962ed9c4899426caa433f`, restore `0x99a639b01dbd0ed81cceeb8eade9088fcde05ae50c40c16c29f157336a9148fa`).
 - **2026-04-04 — Release-candidate fast-path smoke.** Intent: repeat fast-path with fresh IDs. Change: thresholds lowered; lineage 5→6 executed. Outcome: finalized; thresholds restored (lower `0x319f25e36aba86209ed361d5456f1d2a431be73baaaeff31fb8af054c2cb2744`, restore `0xa8bd9b575fa02d2f00abe902cfa6aa700d4fba08e26906815b41cb3d58713d5d`).
+- **2026-04-18 — Follow-up XRPL proof run.** Intent: rerun the admin fast-path after submit-review debugging and preserve a fresh explorer-backed lineage proof. Change: thresholds lowered; lineage 7→8 executed end to end. Outcome: all 8 transactions succeeded; thresholds restored (lower `0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7`, restore `0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88`).
 - **2026-04-04 — Explorer verification attempts.** Intent: verify all contracts on Blockscout. Change: bulk + single submissions accepted. Outcome: verification stuck in queue; details in `deployments/xrpl-testnet-verification.md`.
 
 ## Deployment Ledger
@@ -31,6 +32,7 @@ _Manifests:_ V5 `deployments/xrpl-testnet.json`; archived V4.5 `deployments/arch
 - 1→2 (SHIRLEY_CENTRAL): root `0xc38e6d451f302740bd8fa6398405ce11d162e7532f636b44927ecad94599a6e8`, finalize `0x57fdf994da619d999a5750b9469cb02b51ba6dcdae73d6a183ba483032cd6705`; child `0x8a8ab32b0b6b0621bdfcfadb395fc8fa2c9099c18333fa0b11532b0056ea8bdd`, finalize `0x57770356b9776a046415f32d7ed52d1d99eaa92cc02f6ac348b3c4595d8e5c0f`.
 - 3→4 (admin fast-path): thresholds lower `0x56b7797abcc95b022e5007dd47d7cc5576519d5073b962ed9c4899426caa433f`; root `0x23241778cc15a87e4af6c17674e568fdd2d32f703746344e1743763dc65e8d8d`, finalize `0xbc668f21a9b0ae2c7653de25f2e3750d96d2c73e76b9d28fd40ec5a87749d20d`; child finalize `0x1360e79b394105c56daa82a56c1e07c7e938becd72e94efa6ca529572162be85`; thresholds restore `0x99a639b01dbd0ed81cceeb8eade9088fcde05ae50c40c16c29f157336a9148fa`.
 - 5→6 (release-candidate): thresholds lower `0x319f25e36aba86209ed361d5456f1d2a431be73baaaeff31fb8af054c2cb2744`; root `0x5643c2e16114c7b833d9975e7fca353f79d7aa2b49bd50b5d4f249424ffb098f`, finalize `0xcada91ccf516fdce022ae3d4b7b3b3b84950115a3e0522f3fd16aeeb41509796`; child finalize `0x47b285551172bde367cbaf78839e891a8e6b5d4a32f09e55786af0ae2595742b`; thresholds restore `0xa8bd9b575fa02d2f00abe902cfa6aa700d4fba08e26906815b41cb3d58713d5d`.
+- 7→8 (follow-up proof run): thresholds lower `0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7`; root `0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d`, finalize `0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad`; child finalize `0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8`; thresholds restore `0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88`.
 
 ## What This Repo Is
 - Solidity protocol for trusted transformed datasets on XRPL EVM testnet.
@@ -104,6 +106,23 @@ React/Vite console for protocol truth: lineage, validation posture, audit timeli
 - Verification notes: `deployments/xrpl-testnet-verification.md`
 - Archived V4.5 manifest: `deployments/archive/xrpl-testnet-v4.json`
 - Smoke runner: `script/xrpl-smoke-test.ps1`
+
+## XRPL Proof Links
+- Follow-up proof run checklist:
+  - lower thresholds: [0x588b...b6b7](https://explorer.testnet.xrplevm.org/tx/0x588b9b0f791aeb5197b7e3655fe6cea5e9a34d897e98305c7df370c7b110b6b7)
+  - root submit: [0xbb55...560d](https://explorer.testnet.xrplevm.org/tx/0xbb5546659be283beac1e82ebb34399e799e5e8a168f23d798818c54c69f0560d)
+  - root review: [0x4aff...d0d9](https://explorer.testnet.xrplevm.org/tx/0x4affb360ff4f4373d83208895dcbf098f34d27ae55170ecc04defbeadf91d0d9)
+  - root finalize: [0x230f...83ad](https://explorer.testnet.xrplevm.org/tx/0x230ff012d9dcdd692b2c2cc964bc9bf9df09858eb0e8bac607d2d0b9e0f583ad)
+  - child submit: [0xb291...d3a6](https://explorer.testnet.xrplevm.org/tx/0xb291d706b7e80b6489ee65b97aa8e9cc3af31e38aa8a599d758cc855e4f2d3a6)
+  - child review: [0xf51c...8d02](https://explorer.testnet.xrplevm.org/tx/0xf51c21383e5bba144a8eadb8a9792673870aa6a435e85dd9d3d32cc26bfe8d02)
+  - child finalize: [0xaac1...8db8](https://explorer.testnet.xrplevm.org/tx/0xaac177cdefbea017a24622a48f00c8b6a5b626bab67198bb54c9708200978db8)
+  - restore thresholds: [0x81b0...8d88](https://explorer.testnet.xrplevm.org/tx/0x81b0ce4ff72ef128984c67d019c71649a919afb0001e1e98e41a083a46b08d88)
+
+## Screenshots
+- Follow-up proof board: `docs/screenshots/xrpl-followup-proof-board.png`
+- Source file for regeneration: `docs/screenshots/xrpl-followup-proof.html`
+
+![XRPL follow-up proof board](docs/screenshots/xrpl-followup-proof-board.png)
 
 ## Long-Form Case Study
 `docs/datumx-case-study.md`
