@@ -1,9 +1,11 @@
 # DatumX
-Deterministic release-governance protocol for AI-transformed industrial datasets, with canonical payload enforcement, no-branch lineage, validator consensus, and auditor-controlled finalization on XRPL EVM Testnet.
+<img width="1983" height="793" alt="ChatGPT Image Apr 22, 2026, 04_09_08 AM" src="https://github.com/user-attachments/assets/dac2d161-30c2-48d3-afa7-973b12ba5df4" />
+
+> Deterministic release-governance protocol for AI-transformed industrial datasets, with canonical payload enforcement, no-branch lineage, validator consensus, and auditor-controlled finalization on XRPL EVM Testnet.
 
 ![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-78A37B) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-5F7FA7) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-1f2937) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-4b5563) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-334155) ![License](https://img.shields.io/badge/License-MIT-15803d)
 
-## Live
+## 🔴 Live Demo
 
 | Surface | Link |
 | --- | --- |
@@ -14,6 +16,17 @@ Deterministic release-governance protocol for AI-transformed industrial datasets
 
 DatumX is live on XRPL EVM Testnet with a canonical V5 deployment, recorded lineage proofs for `1->2`, `3->4`, `5->6`, and `7->8`, and threshold restoration back to `3 / 6667 / 7000` after every fast-path smoke exercise.
 
+
+
+<img width="2560" height="1440" alt="ScreenRecorderProject77-ezgif com-optimize" src="https://github.com/user-attachments/assets/0316c414-a6d1-4e29-988b-218594ca887e" />
+
+<img width="2560" height="1440" alt="ScreenRecorderProject78-ezgif com-optimize" src="https://github.com/user-attachments/assets/3c8e2d6b-6ba3-4376-b7b7-e4049453c706" />
+
+
+
+
+
+---
 ## What This Is
 
 DatumX is a Solidity protocol and inspection console for proving that AI-transformed exploration datasets are decision-grade before they move into technical review, targeting, and resource-definition workflows. It does not treat transformed data as a file-storage problem. It treats each release as a governed analytical unit with a canonical payload, explicit lifecycle, deterministic lineage, validator review state, confidence aggregation, and auditor-controlled closure.
@@ -67,6 +80,39 @@ DatumX is also intentionally honest about trust boundaries. There is no hidden b
 | 2026-04-04 | Verify contracts on Blockscout | Standard JSON bundles submitted in bulk, then retried one-by-one for selected contracts | Submissions accepted but verification remained stuck in the explorer queue |
 | 2026-04-17 | Debug failing `submitReview` execution | Added simulation, custom-error decoding, and structured preflight checks to reveal `ReviewAlreadySubmitted()` on finalized `DS-006` | Review writes now fail loudly before broadcast with the real reason |
 | 2026-04-18 | Preserve a fresh explorer-backed lineage proof after the review-debug pass | Fast-path smoke run created datasets `7` and `8`, verified `getParentDatasetId(8) = 7`, then restored thresholds | Third recorded fast-path lineage proof completed successfully |
+
+---
+
+## ⚡ Live Execution
+
+### Governance & Threshold Controls
+<img width="2560" height="1440" alt="DatumX — Governance & Threshold Controls" src="https://github.com/user-attachments/assets/a02039a3-7c1c-417c-929c-b6620f97cca2" />
+
+### Workflow Design & Research
+<img width="2560" height="1440" alt="DatumX — Workflow Design & Research" src="https://github.com/user-attachments/assets/2e420f4f-7423-4b72-bbfd-21bec1ad7e0c" />
+
+### Overview Dashboard<img width="2560" height="1440" alt="ScreenRecorderProject77-ezgif com-optimize" src="https://github.com/user-attachments/assets/c4fa2757-5ee5-41f6-a230-8f22efaf97eb" />
+<img width="2560" height="1440" alt="ScreenRecorderProject77-ezgif com-optimize" src="https://github.com/user-attachments/assets/a504d4cc-2665-40b9-a3e5-2646e5fb5806" />
+
+<img width="2560" height="1440" alt="DatumX — Overview Dashboard" src="https://github.com/user-attachments/assets/1885b859-978b-4723-b657-cc817ad4c2ee" />
+
+### Validation Queue
+https://github.com/user-attachments/assets/ba2fd327-4c84-406e-b942-6e3d9ffd4306
+
+### Audit Trail
+https://github.com/user-attachments/assets/cc6dfa2b-7ed4-415c-b211-dc178ec1e483
+
+### Dataset Registry
+https://github.com/user-attachments/assets/9fd70b3b-5cbd-4938-a236-694c40f59626
+
+### Console Walkthrough
+https://github.com/user-attachments/assets/4bda0c6d-942b-46cb-8316-3efa38109207
+
+### Project Administration
+https://github.com/user-attachments/assets/aba2571e-278d-45c3-a579-f925ee588695
+
+---
+
 
 ## Deployment Ledger
 
@@ -343,3 +389,7 @@ DatumX Protocol is built by ZRT. The point of the system is not to sound protoco
 ## License
 
 MIT - see [LICENSE](LICENSE)
+
+
+<img width="1983" height="793" alt="ChatGPT Image Apr 22, 2026, 04_52_27 AM" src="https://github.com/user-attachments/assets/372d96ac-7e53-4315-984c-3e83bd69a9d9" />
+
