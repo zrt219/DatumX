@@ -367,7 +367,7 @@ vercel --prod
   - `output/doc/DatumX-Executive-Technical-Brief.docx`
   - `output/doc/DatumX-Case-Study.docx`
 
-## Noble Pains Uranium Alignment
+## Noble Plains Uranium Alignment
 
 The protocol is well suited to uranium exploration programs where digitization quality is no longer the only gating issue. In that operating environment, the real risk is not whether AI can extract signal from historical logs, but whether the transformed release that reaches technical review can still be defended. DatumX answers that risk with typed payload normalization, deterministic lineage, validator consensus, explicit thresholds, and auditor-only closure. That is a governance layer for decision-grade exploration data, not a generic blockchain wrapper around files.
 
