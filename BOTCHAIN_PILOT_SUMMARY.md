@@ -156,7 +156,7 @@ Executed via parallel multi-agent teamwork architecture:
 - **Phase A (Timeline & Provenance)**: PASSED (Verified git branch lineage and commit integrity).
 - **Phase B (Anti-Cheating & Invariant Audit)**: PASSED (Zero skipped tests, zero mock bypasses, genuine cryptographic hashing).
 - **Phase C (Independent Re-Execution)**: PASSED (All 3 smoke tests independently re-executed and verified).
-- **Final Verdict**: **VICTORY CONFIRMED**.
+- **Final Verdict**: Historical local smoke tests reported; live chain integration requires additional evidence.
 
 ---
 
@@ -189,4 +189,9 @@ Executed via parallel multi-agent teamwork architecture:
 ### Branch Metadata
 - **Branch**: [`feature/botchain-registry-pilot`](https://github.com/zrt219/DatumX/tree/feature/botchain-registry-pilot)
 - **Git Remote**: `https://github.com/zrt219/DatumX.git`
-- **Status**: 100% green, audited, and ready for presentation.
+- **Status**: Review branch with new safeguards and pending CI; do not claim live BOT Chain deployment.
+
+
+## Current review caveat
+
+Earlier smoke tests relied on emulated registries and mocked browser wallets. The current branch adds hard chain/network and signer checks, bytecode existence checks, transaction receipt confirmation, and stricter client-side status labeling. The old 100-run claims do not replace independent current-commit verification. The real Bohr testnet contract address and receipt are not yet supplied. No mainnet deployment is authorized.
