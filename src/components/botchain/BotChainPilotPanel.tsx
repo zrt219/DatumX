@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { CheckCircle2, XCircle, ExternalLink, Shield, Database, Cpu, Layers } from 'lucide-react'
+import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info } from 'lucide-react'
 import { Panel } from '../shared/Panel'
-import { BOTCHAIN_TESTNET } from '../../lib/botchainConfig'
+import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
 import { switchToBotChainTestnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
+import { isBotchainContractDeployed, submitBotchainDataset, readBotchainDataset } from '../../lib/botchainClient'
 import type { WalletState } from '../../types'
 
 interface BotChainPilotPanelProps {
@@ -18,6 +19,7 @@ interface StoredPilotRecord {
   metadataURI: string
   submitter: string
   timestamp: number
+  isLiveOnChain: boolean
   txHash?: string
 }
 
@@ -43,9 +45,10 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [calculatedHash, setCalculatedHash] = useState<string>('')
   const [isHashing, setIsHashing] = useState(false)
 
-  // On-chain interaction state
+  // Interaction state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [storedRecord, setStoredRecord] = useState<StoredPilotRecord | null>(null)
 
   // Verification state
@@ -53,10 +56,12 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [verificationResult, setVerificationResult] = useState<'IDLE' | 'MATCH' | 'MISMATCH'>('IDLE')
 
   const isBohrChain = wallet.chainId === BOTCHAIN_TESTNET.chainId
+  const contractDeployed = isBotchainContractDeployed()
 
   const handleComputeHash = async () => {
     setIsHashing(true)
     setErrorMessage(null)
+    setInfoMessage(null)
     try {
       const parsed = JSON.parse(rawJson)
       const canonical = canonicalJsonStringify(parsed)
@@ -84,29 +89,64 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     }
   }
 
-  const handleSimulateOrRegister = async () => {
+  const handleRegisterRecord = async () => {
     setErrorMessage(null)
+    setInfoMessage(null)
     setIsSubmitting(true)
+
     try {
       const parsed = JSON.parse(rawJson)
       const canonical = canonicalJsonStringify(parsed)
       const hash = await computeSha256Hex(canonical)
-      const simulatedId = (await computeSha256Hex(datasetIdInput)) as `0x${string}`
+      const computedId = (await computeSha256Hex(datasetIdInput)) as `0x${string}`
 
-      // Create confirmed verifiable record state
-      const mockTx = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
+      if (contractDeployed && isBohrChain && wallet.account) {
+        // Live on-chain transaction mode
+        try {
+          const liveTx = await submitBotchainDataset({
+            account: wallet.account,
+            datasetId: computedId,
+            datasetHash: hash,
+            version: versionInput,
+            metadataURI: metadataUriInput,
+          })
 
-      const confirmedRecord: StoredPilotRecord = {
-        datasetId: simulatedId,
-        datasetHash: hash,
-        version: versionInput,
-        metadataURI: metadataUriInput,
-        submitter: wallet.account || '0x31A826bB9D5F6087d94CDA31945C1234d061b788',
-        timestamp: Math.floor(Date.now() / 1000),
-        txHash: mockTx,
+          // Read back confirmed record from chain
+          const onChainRecord = await readBotchainDataset(computedId)
+
+          setStoredRecord({
+            datasetId: computedId,
+            datasetHash: onChainRecord.datasetHash,
+            version: onChainRecord.version,
+            metadataURI: onChainRecord.metadataURI,
+            submitter: onChainRecord.submitter,
+            timestamp: Number(onChainRecord.timestamp),
+            isLiveOnChain: true,
+            txHash: liveTx,
+          })
+          setInfoMessage(`Transaction confirmed on Bohr Testnet: ${liveTx}`)
+        } catch (contractErr: unknown) {
+          const contractMsg = contractErr instanceof Error ? contractErr.message : 'On-chain submission failed.'
+          setErrorMessage(contractMsg)
+        }
+      } else {
+        // Clear, honest demonstration mode without fabricated transaction hashes or fake explorer links
+        const stagedRecord: StoredPilotRecord = {
+          datasetId: computedId,
+          datasetHash: hash,
+          version: versionInput,
+          metadataURI: metadataUriInput,
+          submitter: wallet.account || '0x31A826bB9D5F6087d94CDA31945C1234d061b788',
+          timestamp: Math.floor(Date.now() / 1000),
+          isLiveOnChain: false,
+          txHash: undefined, // Strictly undefined: NO fake/mock transaction hashes generated
+        }
+
+        setStoredRecord(stagedRecord)
+        setInfoMessage(
+          'Workflow staged in pilot sandbox. Live on-chain transaction requires Bohr Testnet deployment and faucet tokens.',
+        )
       }
-
-      setStoredRecord(confirmedRecord)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration error'
       setErrorMessage(msg)
@@ -177,9 +217,31 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         </div>
       </Panel>
 
+      {/* Deployment & Integrity Notice */}
+      <div className="rounded-xl border border-sky-500/20 bg-sky-950/20 px-4 py-3 text-xs text-sky-200 flex items-start gap-3">
+        <Info size={16} className="mt-0.5 shrink-0 text-sky-400" />
+        <div className="space-y-1">
+          <p className="font-medium text-sky-100">Testnet Pilot Deployment Posture</p>
+          <p className="text-sky-300/80 leading-relaxed">
+            Smart contract bytecode and test suite ([`BotChainDatasetRegistry.sol`](contracts/botchain/BotChainDatasetRegistry.sol)) are fully compiled and verified.
+            {contractDeployed ? (
+              <span className="text-[#4ade80] font-semibold"> Live registry contract active at {BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress}.</span>
+            ) : (
+              <span> On-chain contract deployment on Bohr Testnet will be executed once test BOT gas tokens are allocated. The console operates honestly in client-side staging mode without fabricated blockchain transaction hashes.</span>
+            )}
+          </p>
+        </div>
+      </div>
+
       {errorMessage && (
         <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          <XCircle size={16} /> {errorMessage}
+          <AlertCircle size={16} /> {errorMessage}
+        </div>
+      )}
+
+      {infoMessage && (
+        <div className="flex items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-200">
+          <Info size={16} /> {infoMessage}
         </div>
       )}
 
@@ -245,11 +307,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               </button>
               <button
                 type="button"
-                onClick={handleSimulateOrRegister}
+                onClick={handleRegisterRecord}
                 disabled={isSubmitting}
                 className="flex-1 rounded-lg bg-[#0284c7] py-2 font-medium text-white hover:bg-[#0369a1]"
               >
-                {isSubmitting ? 'Submitting...' : 'Register On-Chain'}
+                {isSubmitting ? 'Registering...' : contractDeployed ? 'Submit On-Chain' : 'Stage Record'}
               </button>
             </div>
 
@@ -273,7 +335,20 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             {storedRecord ? (
               <div className="space-y-2.5">
                 <div className="rounded-lg bg-black/30 p-3 border border-white/5 space-y-1.5">
-                  <div className="text-slate-400">Dataset ID (Hash):</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Record Status:</span>
+                    {storedRecord.isLiveOnChain ? (
+                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-400 border border-emerald-500/30">
+                        CONFIRMED ON-CHAIN
+                      </span>
+                    ) : (
+                      <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 border border-amber-500/30">
+                        STAGED IN PILOT SANDBOX
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-slate-400 pt-1">Dataset ID:</div>
                   <div className="font-mono text-[11px] text-[#7dd3fc] break-all">{storedRecord.datasetId}</div>
                   
                   <div className="text-slate-400 pt-1">Stored Content Hash:</div>
@@ -294,7 +369,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                   <div className="font-mono text-[11px] text-slate-300 break-all">{storedRecord.submitter}</div>
                 </div>
 
-                {storedRecord.txHash && (
+                {storedRecord.txHash ? (
                   <div className="rounded-lg bg-[#0d1c2e] p-2.5 border border-[#38bdf8]/20 flex items-center justify-between">
                     <span className="text-slate-400">Transaction:</span>
                     <a
@@ -304,8 +379,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                       className="flex items-center gap-1 font-mono text-[11px] text-[#38bdf8] hover:underline"
                     >
                       {storedRecord.txHash.slice(0, 10)}...{storedRecord.txHash.slice(-6)}
-                      <ExternalLink size={12} />
                     </a>
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-black/20 p-2.5 border border-white/5 text-[11px] text-slate-400">
+                    <span>On-chain transaction hash will be generated upon live contract execution on Bohr Testnet.</span>
                   </div>
                 )}
               </div>
@@ -328,7 +406,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
 
           <div className="space-y-3 text-xs">
             <p className="text-slate-400 text-[11px]">
-              Recalculates canonical SHA-256 against stored on-chain hash to verify data integrity without corruption or tampering.
+              Recalculates canonical SHA-256 against stored hash to verify data integrity without corruption or tampering.
             </p>
 
             <div>
@@ -347,7 +425,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               disabled={!storedRecord}
               className="w-full rounded-lg bg-[#7c3aed] py-2 font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
             >
-              Verify Against On-Chain Hash
+              Verify Against Stored Hash
             </button>
 
             {verificationResult !== 'IDLE' && (
@@ -364,7 +442,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                       <CheckCircle2 size={18} /> MATCH [RECORD INTEGRITY VERIFIED]
                     </span>
                     <span className="text-[10px] font-normal text-slate-300">
-                      Calculated SHA-256 matches stored state on Bohr Testnet
+                      Calculated SHA-256 matches stored state
                     </span>
                   </div>
                 ) : (
@@ -373,7 +451,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                       <XCircle size={18} /> MISMATCH [PAYLOAD ALTERED]
                     </span>
                     <span className="text-[10px] font-normal text-slate-300">
-                      Recalculated hash does not match on-chain record
+                      Recalculated hash does not match stored record
                     </span>
                   </div>
                 )}
