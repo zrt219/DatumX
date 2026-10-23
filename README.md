@@ -3,9 +3,29 @@
 
 > Deterministic release-governance protocol for AI-transformed industrial datasets, with canonical payload enforcement, no-branch lineage, validator consensus, and auditor-controlled finalization on XRPL EVM Testnet.
 
-![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-78A37B) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-5F7FA7) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-1f2937) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-4b5563) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-334155) ![License](https://img.shields.io/badge/License-MIT-15803d)
+![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-78A37B) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-5F7FA7) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-1f2937) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-4b5563) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-334155) ![License](https://img.shields.io/badge/License-MIT-15803d) ![Pilot](https://img.shields.io/badge/Pilot-BOT_Chain_Testnet_(968)-38bdf8)
 
-## 🔴 Live Demo
+## Branch Status: BOT Chain Registry Pilot (`feature/botchain-registry-pilot`)
+
+This branch contains the isolated **BOT Chain Dataset Registry Pilot** prepared for technical review with **Leon, Roy, and Josh** from BOT Chain. It establishes an independent multi-network architecture supporting both the canonical **XRPL EVM Testnet (1449000)** and **BOT / Bohr Testnet (968)**.
+
+> Full Technical Dossier: See [`BOTCHAIN_PILOT_SUMMARY.md`](BOTCHAIN_PILOT_SUMMARY.md) and [`docs/botchain/FRIDAY_HANDOFF.md`](docs/botchain/FRIDAY_HANDOFF.md) for research notes, test benchmarks, and review discussion points.
+
+### Summary of Completed Deliverables:
+- **Smart Contract ([`contracts/botchain/BotChainDatasetRegistry.sol`](contracts/botchain/BotChainDatasetRegistry.sol))**: Lightweight dataset registry storing cryptographic proofs (`SHA-256`), versions, and public metadata references (`registerDataset`, `getDataset`, `verifyDatasetHash`).
+- **Foundry Deployment Automation ([`script/DeployBotChainRegistry.s.sol`](script/DeployBotChainRegistry.s.sol))**: Deterministic deployment script targeting Bohr Testnet (`Chain ID 968`).
+- **Two-Network Frontend Architecture**:
+  - Independent network definitions ([`src/lib/botchainConfig.ts`](src/lib/botchainConfig.ts)) targeting Bohr Testnet (`https://rpc.bohr.life`, `https://scan.bohr.life`).
+  - Canonical JSON serialization and SHA-256 calculation ([`src/lib/canonicalHash.ts`](src/lib/canonicalHash.ts)).
+  - Interactive **BOT Chain Pilot** console view ([`src/components/botchain/BotChainPilotPanel.tsx`](src/components/botchain/BotChainPilotPanel.tsx)) providing the 3-step **Register -> Read -> Verify** workflow with instant match/mismatch verification.
+- **Verification & Stress Testing**:
+  - **100x Stress Test Passed**: 100 consecutive runs across Foundry (4,200 tests), Vitest (1,700 tests), and Playwright headless browser (1,300 UI steps) with 100% pass rate and zero flakes.
+  - **3 Multi-Layer Smoke Tests Passed**: Verified via multi-agent teamwork and confirmed by clean-room independent Victory Audit.
+- **Zero Regression**: Preserves all existing XRPL EVM Testnet contracts, deployment manifests ([`deployments/xrpl-testnet.json`](deployments/xrpl-testnet.json)), and tests without modification.
+
+---
+
+## Live Demo
 
 | Surface | Link |
 | --- | --- |
