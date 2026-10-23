@@ -2,7 +2,7 @@
 
 **Checkpoint Date**: Friday, October 23, 2026  
 **Review Audience**: Leon, Roy, and Josh (BOT Chain) & ZRT Team  
-**Status**: VERIFIED & READY FOR REVIEW  
+**Status**: CODE REVIEW READY / LIVE BOT CHAIN REGISTRY NOT YET VERIFIED  
 
 ---
 
@@ -12,7 +12,7 @@
 - **Reference Branch**: `zrt219-patch-1`
 - **Source Reference Commit SHA**: `57ca541e58aa942cb2faf469b0ae62878fe21a15`
 - **New Working Branch**: `feature/botchain-registry-pilot`
-- **Current Branch HEAD SHA**: `914a80c9d4fa982e4f410467e7b4c6e52c37c2c3`
+- **Current Branch HEAD SHA**: use `git rev-parse HEAD` or GitHub branch head (this document does not self-reference its own commit)
 
 ---
 
@@ -50,7 +50,7 @@ Per Leon's specification for the smallest verifiable pilot:
    - Direct verification `verifyDatasetHash(datasetId, candidateHash)`
    - Role protection with optional public testnet registration toggle
 2. **Deployment Automation**: `script/DeployBotChainRegistry.s.sol`
-   - Hardcoded safeguard rejecting unexpected chain IDs
+   - Hard-revert safeguard rejecting unexpected chain IDs; nonzero explicit signing key required
 3. **Frontend Integration**:
    - `src/lib/botchainConfig.ts`: Bohr testnet parameters
    - `src/lib/canonicalHash.ts`: Deterministic object serialization & SHA-256 digest computation
@@ -62,7 +62,7 @@ Per Leon's specification for the smallest verifiable pilot:
 
 ### A. Foundry Smart Contract Suite
 ```
-Ran 12 tests for test/BotChainDatasetRegistry.t.sol:BotChainDatasetRegistryTest
+Recorded baseline: test/BotChainDatasetRegistry.t.sol contains 8 test functions. Fresh CI results required.
 [PASS] testDuplicateRegistrationReverts() (gas: 236231)
 [PASS] testNonExistentRecordReverts() (gas: 38718)
 [PASS] testOnlyOwnerCanConfigure() (gas: 23742)
@@ -71,12 +71,12 @@ Ran 12 tests for test/BotChainDatasetRegistry.t.sol:BotChainDatasetRegistryTest
 [PASS] testRegisterDatasetSuccess() (gas: 247755)
 [PASS] testVerifyDatasetHashMatchAndMismatch() (gas: 240220)
 [PASS] testZeroParametersRevert() (gas: 38215)
-Suite result: ok. 12 passed; 0 failed
+Historical output not independently reproduced in this review.
 
 Ran 30 tests for test/DatumXProtocol.t.sol:DatumXProtocolTest (XRPL V5 Suite)
 Suite result: ok. 30 passed; 0 failed
 
-TOTAL: 42 passed; 0 failed; 0 skipped
+Historical reported aggregate; not evidence for the current branch. Inspect latest GitHub Actions results.
 ```
 
 ### B. Frontend Vitest Suite
@@ -117,3 +117,14 @@ Tests       17 passed (17)
 1. Does the 3-step Register → Read → Verify workflow meet the demonstration requirements for your team?
 2. Should we plan a follow-up phase adding multi-validator consensus or keep the BOT Chain registry optimized for high-throughput single-source indexing?
 3. What is the timeline and eligibility criteria for formal review under the BOT Chain Ecosystem Support Program?
+
+
+## Final audit addendum — 2026-10-23
+
+- The earlier browser smoke tests exercised an emulated registry, not a live transaction. Do not present them as blockchain execution evidence.
+- The new `src/lib/botchainClient.ts` requires a matching RPC/wallet chain, existing bytecode, correct wallet identity and a successful transaction receipt before reporting success. An additional genuine Bohr testnet transaction and independent RPC readback remain pending.
+- Deployment requires an explicit signer and reverts on unsupported chain IDs. Default registration is allowlisted (public mode off).
+- The frontend labels staged records separately and no longer fabricates transaction hashes.
+- GitHub Actions workflow `.github/workflows/pilot-verify.yml` runs lint, Vitest, build, Forge build and Forge tests. Treat CI as pending until GitHub reports completed results on the latest commit.
+- Check the code-reuse document before external reuse: no root LICENSE was present at audit time, despite an MIT badge and SPDX comments. Legal scope and asset permission are not conclusively established.
+- No Botchain mainnet deployment or financial commitment is authorized. Separate user approval is required for testnet broadcasting.
