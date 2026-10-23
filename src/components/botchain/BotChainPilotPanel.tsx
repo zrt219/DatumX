@@ -92,6 +92,8 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const handleRegisterRecord = async () => {
     setErrorMessage(null)
     setInfoMessage(null)
+    setStoredRecord(null)
+    setVerificationResult('IDLE')
     setIsSubmitting(true)
 
     try {
@@ -100,7 +102,8 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       const hash = await computeSha256Hex(canonical)
       const computedId = (await computeSha256Hex(datasetIdInput)) as `0x${string}`
 
-      if (contractDeployed && isBohrChain && wallet.account) {
+      if (contractDeployed) {
+        if (!isBohrChain || !wallet.account) throw new Error('Connect an authorized wallet on Bohr Testnet before submitting.')
         // Live on-chain transaction mode
         try {
           const liveTx = await submitBotchainDataset({
@@ -124,7 +127,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             isLiveOnChain: true,
             txHash: liveTx,
           })
-          setInfoMessage(`Transaction confirmed on Bohr Testnet: ${liveTx}`)
+          setInfoMessage(`Transaction receipt confirmed on Bohr Testnet: ${liveTx}`)
         } catch (contractErr: unknown) {
           const contractMsg = contractErr instanceof Error ? contractErr.message : 'On-chain submission failed.'
           setErrorMessage(contractMsg)
@@ -223,9 +226,9 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         <div className="space-y-1">
           <p className="font-medium text-sky-100">Testnet Pilot Deployment Posture</p>
           <p className="text-sky-300/80 leading-relaxed">
-            Smart contract bytecode and test suite ([`BotChainDatasetRegistry.sol`](contracts/botchain/BotChainDatasetRegistry.sol)) are fully compiled and verified.
+            The pilot contract source and test suite are available in the review branch.
             {contractDeployed ? (
-              <span className="text-[#4ade80] font-semibold"> Live registry contract active at {BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress}.</span>
+              <span className="text-[#4ade80] font-semibold"> Registry address configured: {BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress}. Live code and network checks occur before submissions.</span>
             ) : (
               <span> On-chain contract deployment on Bohr Testnet will be executed once test BOT gas tokens are allocated. The console operates honestly in client-side staging mode without fabricated blockchain transaction hashes.</span>
             )}
@@ -414,7 +417,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               <textarea
                 rows={6}
                 value={verificationInput}
-                onChange={(e) => setVerificationInput(e.target.value)}
+                onChange={(e) => { setVerificationInput(e.target.value); setVerificationResult('IDLE') }}
                 className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#a78bfa]"
               />
             </div>
@@ -425,7 +428,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               disabled={!storedRecord}
               className="w-full rounded-lg bg-[#7c3aed] py-2 font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
             >
-              Verify Against Stored Hash
+              Compare Payload Against Stored Hash
             </button>
 
             {verificationResult !== 'IDLE' && (
@@ -439,16 +442,16 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 {verificationResult === 'MATCH' ? (
                   <div className="flex flex-col items-center gap-1">
                     <span className="flex items-center gap-1.5 text-base">
-                      <CheckCircle2 size={18} /> MATCH [RECORD INTEGRITY VERIFIED]
+                      <CheckCircle2 size={18} /> MATCH [HASH MATCHES STORED RECORD]
                     </span>
                     <span className="text-[10px] font-normal text-slate-300">
-                      Calculated SHA-256 matches stored state
+                      Calculated SHA-256 matches the selected record; data accuracy is not established
                     </span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-1">
                     <span className="flex items-center gap-1.5 text-base">
-                      <XCircle size={18} /> MISMATCH [PAYLOAD ALTERED]
+                      <XCircle size={18} /> MISMATCH [CONTENT HASH DIFFERS]
                     </span>
                     <span className="text-[10px] font-normal text-slate-300">
                       Recalculated hash does not match stored record
