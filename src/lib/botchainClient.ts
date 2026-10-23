@@ -50,6 +50,7 @@ export async function readBotchainDataset(datasetId: `0x${string}`) {
     throw new Error('BotChainDatasetRegistry is not yet deployed on Bohr Testnet.')
   }
 
+  await ensureRegistryExists()
   return botchainPublicClient.readContract({
     address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress,
     abi: botChainRegistryAbi,
@@ -76,7 +77,13 @@ export async function submitBotchainDataset(params: {
     )
   }
 
+  await ensureRegistryExists()
+  const actualChain = await walletClient.getChainId()
+  if (actualChain !== BOTCHAIN_TESTNET.chainId) throw new Error('Wrong wallet chain: Bohr Testnet 968 required.')
+  const accounts = await walletClient.getAddresses()
+  if (!accounts.some((a) => a.toLowerCase() === params.account.toLowerCase())) throw new Error('Wallet account mismatch.')
   const hash = await walletClient.writeContract({
+    chain: botchainTestnetChain,
     account: params.account,
     address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress,
     abi: botChainRegistryAbi,
@@ -84,5 +91,16 @@ export async function submitBotchainDataset(params: {
     args: [params.datasetId, params.datasetHash, params.version, params.metadataURI],
   })
 
+  const receipt = await botchainPublicClient.waitForTransactionReceipt({ hash, confirmations: 1 })
+  if (receipt.status !== 'success' || receipt.transactionHash.toLowerCase() !== hash.toLowerCase()) throw new Error('BOT Chain transaction reverted or failed.')
   return hash
+}
+
+async function ensureRegistryExists() {
+  const chainId = await botchainPublicClient.getChainId()
+  if (chainId !== BOTCHAIN_TESTNET.chainId) throw new Error('BOT Chain RPC network mismatch.')
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!isBotchainContractDeployed()) throw new Error('BOT Chain registry address not configured.')
+  const bytecode = await botchainPublicClient.getBytecode({ address })
+  if (!bytecode || bytecode === '0x') throw new Error('BOT Chain contract bytecode not deployed at configured address.')
 }
