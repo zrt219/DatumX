@@ -12,7 +12,7 @@
 - **Reference Branch**: `zrt219-patch-1`
 - **Source Reference Commit SHA**: `57ca541e58aa942cb2faf469b0ae62878fe21a15`
 - **New Working Branch**: `feature/botchain-registry-pilot`
-- **Current Branch HEAD SHA**: `e78bf59a2234d4be42705a78108d287b73720fa5`
+- **Current Branch HEAD SHA**: `914a80c9d4fa982e4f410467e7b4c6e52c37c2c3`
 
 ---
 
