@@ -10,10 +10,10 @@ contract BotChainDatasetRegistryTest is Test {
     address public submitter = address(0xBB2);
     address public intruder = address(0xCC3);
 
-    bytes32 public testId = keccak256("BOT-SYNTH-DATASET-001");
-    bytes32 public testHash = sha256(abi.encodePacked("canonical-sample-payload-content-v1"));
-    string public testVersion = "1.0.0";
-    string public testMetadataUri = "https://datumx.io/metadata/bot-synth-001.json";
+    bytes32 internal testId = keccak256("BOT-SYNTH-DATASET-001");
+    bytes32 internal testHash = sha256(abi.encodePacked("canonical-sample-payload-content-v1"));
+    string internal testVersion = "1.0.0";
+    string internal testMetadataUri = "https://datumx.io/metadata/bot-synth-001.json";
 
     function setUp() public {
         vm.prank(deployer);

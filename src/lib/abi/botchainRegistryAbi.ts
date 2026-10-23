@@ -57,6 +57,13 @@ export const botChainRegistryAbi = [
   },
   {
     type: 'function',
+    name: 'getRecordIdAt',
+    inputs: [{ name: 'index', type: 'uint256', internalType: 'uint256' }],
+    outputs: [{ name: '', type: 'bytes32', internalType: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     name: 'owner',
     inputs: [],
     outputs: [{ name: '', type: 'address', internalType: 'address' }],
@@ -70,6 +77,37 @@ export const botChainRegistryAbi = [
     stateMutability: 'view',
   },
   {
+    type: 'function',
+    name: 'authorizedSubmitters',
+    inputs: [{ name: 'submitter', type: 'address', internalType: 'address' }],
+    outputs: [{ name: '', type: 'bool', internalType: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'setPublicRegistration',
+    inputs: [{ name: 'enabled', type: 'bool', internalType: 'bool' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'setAuthorizedSubmitter',
+    inputs: [
+      { name: 'submitter', type: 'address', internalType: 'address' },
+      { name: 'authorized', type: 'bool', internalType: 'bool' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'transferOwnership',
+    inputs: [{ name: 'newOwner', type: 'address', internalType: 'address' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
     type: 'event',
     name: 'DatasetRegistered',
     inputs: [
@@ -79,6 +117,30 @@ export const botChainRegistryAbi = [
       { name: 'metadataURI', type: 'string', indexed: false, internalType: 'string' },
       { name: 'submitter', type: 'address', indexed: true, internalType: 'address' },
       { name: 'timestamp', type: 'uint64', indexed: false, internalType: 'uint64' },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'SubmitterAuthorizationChanged',
+    inputs: [
+      { name: 'submitter', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'authorized', type: 'bool', indexed: false, internalType: 'bool' },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'PublicRegistrationToggled',
+    inputs: [{ name: 'enabled', type: 'bool', indexed: false, internalType: 'bool' }],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'OwnershipTransferred',
+    inputs: [
+      { name: 'previousOwner', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'newOwner', type: 'address', indexed: true, internalType: 'address' },
     ],
     anonymous: false,
   },

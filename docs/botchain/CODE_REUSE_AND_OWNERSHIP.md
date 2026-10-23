@@ -1,6 +1,6 @@
 # DatumX × BOT Chain: Code Reuse, Security & Ownership Audit
 
-**Document Version**: 1.0.0  
+**Document Version**: 1.1.0  
 **Date**: October 23, 2026  
 **Audience**: DatumX Engineering, ZRT Legal & Technical Leadership, Leon & BOT Chain Reviewers  
 
@@ -9,8 +9,8 @@
 ## 1. Codebase Ownership & Licensing Status
 
 - **Repository**: `https://github.com/zrt219/DatumX`
-- **Primary Owner / Author**: ZRT (`zrt219`)
-- **Repository License**: Not conclusively established. The README advertises MIT and selected Solidity files carry MIT SPDX headers, but a root `LICENSE` file was not found on this branch. Do not infer that every source or asset is MIT-licensed.
+- **Primary Owner / Author**: ZRT Protocol Team (`zrt219`)
+- **Repository Licensing Status**: No root `LICENSE` file is currently committed to the repository. While new pilot Solidity files include standard `SPDX-License-Identifier: MIT` headers, repository-wide reuse rights and intellectual property terms remain reserved by ZRT Protocol leadership. Third parties may not assume blanket open-source reuse rights without explicit ownership approval.
 - **Branch Scope**: All BOT Chain pilot code is strictly isolated on branch `feature/botchain-registry-pilot`.
 
 ---
@@ -19,9 +19,9 @@
 
 | Category | Assets / Components | Status / Permissions | Policy |
 |---|---|---|---|
-| **Permitted for Pilot** | `BotChainDatasetRegistry.sol`, deployment scripts, general EVM utility libraries, canonical SHA-256 encoding | **Review pending** | Public inspection is available; reuse beyond applicable existing licenses needs a definitive ownership and licensing review. |
-| **DatumX Protocol Core** | `DatasetGraph.sol`, `ProjectRouter.sol`, `ValidationModule.sol`, `DrillProofAccess.sol` | **ZRT Proprietary Architecture (MIT Core)** | Architecture preserved for XRPL EVM; independent of BOT Chain pilot. |
-| **Excluded Client Material** | "Noble Plains Uranium" project references, borehole log extractions, commercial mining drill patterns | **EXCLUDED** | Proprietary demonstration context. The BOT Chain pilot uses **strictly synthetic public benchmarks**. |
+| **Permitted for Pilot** | `BotChainDatasetRegistry.sol`, deployment scripts, general EVM utility libraries, canonical SHA-256 encoding | **Pilot Evaluation (SPDX MIT header; formal license pending)** | Available to inspect, test, and adapt for technical pilot evaluation with BOT Chain. |
+| **DatumX Protocol Core** | `DatasetGraph.sol`, `ProjectRouter.sol`, `ValidationModule.sol`, `DrillProofAccess.sol` | **ZRT Proprietary Architecture** | Canonical release-governance architecture preserved for XRPL EVM; independent of BOT Chain pilot. |
+| **Excluded Client Material** | Commercial mining borehole logs, gamma traces, and confidential survey references (Shirley Basin / Noble Plains context) | **EXCLUDED** | Proprietary industrial context. The BOT Chain pilot uses **strictly synthetic public benchmarks**. |
 | **Branding & Assets** | DatumX logos, UI trademarks, media recordings | **ZRT Proprietary** | Retained by ZRT; not assigned or licensed to external parties without agreement. |
 
 ---

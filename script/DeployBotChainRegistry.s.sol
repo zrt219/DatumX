@@ -8,27 +8,54 @@ import {BotChainDatasetRegistry} from "../contracts/botchain/BotChainDatasetRegi
 /**
  * @title DeployBotChainRegistry
  * @notice Deterministic deployment script for the DatumX × BOT Chain technical pilot registry.
- * @dev Intended for execution on Bohr Testnet (Chain ID 968).
+ * @dev Enforces strict chain validation, explicit authorization, and safe permission defaults.
  */
 contract DeployBotChainRegistry is Script {
-    error InvalidTargetChain(uint256 chainId);
+    error InvalidTargetChain();
+    error MainnetDeploymentProhibited();
+    error DeploymentNotAuthorized();
     error MissingDeployerKey();
+
     function run() external returns (address registryAddress) {
         uint256 chainId = block.chainid;
-        console2.log("Deploying BotChainDatasetRegistry on Chain ID:", chainId);
+        bool isAuthorized = vm.envOr("BOTCHAIN_DEPLOY_AUTHORIZED", false);
+        uint256 deployerPrivateKey = vm.envOr("BOTCHAIN_PRIVATE_KEY", uint256(0));
+        bool enablePublic = vm.envOr("BOTCHAIN_ENABLE_PUBLIC_REGISTRATION", false);
 
-        // Security check: Guard against accidental deployment to unintended networks
-        if (chainId != 968 && chainId != 31337) {
-            revert InvalidTargetChain(chainId);
+        return deploy(chainId, isAuthorized, deployerPrivateKey, enablePublic);
+    }
+
+    function deploy(
+        uint256 chainId,
+        bool isAuthorized,
+        uint256 deployerPrivateKey,
+        bool enablePublic
+    ) public returns (address registryAddress) {
+        console2.log("Evaluating deployment for Chain ID:", chainId);
+
+        // Security check 1: Hard revert on mainnet (Chain ID 677)
+        if (chainId == 677) {
+            revert MainnetDeploymentProhibited();
         }
 
-        uint256 deployerPrivateKey = vm.envOr("BOTCHAIN_PRIVATE_KEY", uint256(0));
-        if (deployerPrivateKey == 0) revert MissingDeployerKey();
+        // Security check 2: Hard revert on unsupported chains (only Bohr Testnet 968 or Anvil 31337 allowed)
+        if (chainId != 968 && chainId != 31337) {
+            revert InvalidTargetChain();
+        }
+
+        // Security check 3: Never broadcast without explicit authorization
+        if (!isAuthorized) {
+            revert DeploymentNotAuthorized();
+        }
+
+        // Security check 4: Require an explicitly configured signing method (NO public Anvil key fallback)
+        if (deployerPrivateKey == 0) {
+            revert MissingDeployerKey();
+        }
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy with public registration enabled for seamless Friday technical walkthrough
-        BotChainDatasetRegistry registry = new BotChainDatasetRegistry(false);
+        BotChainDatasetRegistry registry = new BotChainDatasetRegistry(enablePublic);
         registryAddress = address(registry);
 
         vm.stopBroadcast();

@@ -44,9 +44,22 @@ export const BOTCHAIN_MAINNET_REFERENCE: NetworkConfig = {
   },
 }
 
+// Configured contract address for Bohr Testnet (Chain ID 968).
+// Must be a verified, network-specific address. Placeholder addresses are forbidden.
+let activePilotRegistryAddress: `0x${string}` | undefined = (
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_BOTCHAIN_REGISTRY_ADDRESS
+    ? (import.meta.env.VITE_BOTCHAIN_REGISTRY_ADDRESS as `0x${string}`)
+    : undefined
+)
+
 export const BOTCHAIN_PILOT_CONFIG = {
   testnet: BOTCHAIN_TESTNET,
   mainnetReference: BOTCHAIN_MAINNET_REFERENCE,
-  // Fallback pilot contract address or placeholder for live Bohr testnet deployment
-  pilotRegistryAddress: '0x1234567890123456789012345678901234567890' as `0x${string}`,
+  get pilotRegistryAddress(): `0x${string}` | undefined {
+    return activePilotRegistryAddress
+  },
+}
+
+export function setBotchainRegistryAddress(address?: `0x${string}`) {
+  activePilotRegistryAddress = address
 }

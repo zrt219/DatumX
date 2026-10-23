@@ -1,4 +1,11 @@
-import { createPublicClient, createWalletClient, custom, http, isAddress } from 'viem'
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+  isAddress,
+  type Hex,
+} from 'viem'
 import { botChainRegistryAbi } from './abi/botchainRegistryAbi'
 import { BOTCHAIN_PILOT_CONFIG, BOTCHAIN_TESTNET } from './botchainConfig'
 import { getEthereumProvider } from './network'
@@ -35,72 +42,216 @@ export function getBotchainWalletClient() {
   })
 }
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
 export function isBotchainContractDeployed(): boolean {
   const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
-  return Boolean(
-    address &&
-      isAddress(address) &&
-      address.toLowerCase() !== '0x1234567890123456789012345678901234567890' &&
-      address.toLowerCase() !== '0x0000000000000000000000000000000000000000',
-  )
+  if (!address) return false
+  if (!isAddress(address)) return false
+  const lower = address.toLowerCase()
+  if (lower === ZERO_ADDRESS) return false
+  if (lower === '0x1234567890123456789012345678901234567890') return false
+  return true
+}
+
+export async function ensureRegistryExists(): Promise<void> {
+  const chainId = await botchainPublicClient.getChainId()
+  if (chainId !== BOTCHAIN_TESTNET.chainId) {
+    throw new Error('BOT Chain RPC network mismatch: Bohr Testnet (Chain ID 968) required.')
+  }
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!isBotchainContractDeployed() || !address) {
+    throw new Error('BOT Chain registry contract address not configured.')
+  }
+  const bytecode = await botchainPublicClient.getBytecode({ address })
+  if (!bytecode || bytecode === '0x') {
+    throw new Error(`BOT Chain contract bytecode not deployed at configured address: ${address}`)
+  }
+}
+
+export interface RegistrationPrerequisiteOptions {
+  walletChainId?: number
+  account?: `0x${string}`
+  publicClient?: typeof botchainPublicClient
+}
+
+/**
+ * Validates all 5 mandatory prerequisites before enabling or executing live registration:
+ * 1. Validate chain ID 968.
+ * 2. Check that contract bytecode exists at the configured address.
+ * 3. Validate the ABI and expected registry interface.
+ * 4. Confirm the submitting wallet's permissions.
+ * 5. Confirm sufficient test gas.
+ * 
+ * Fails closed whenever any condition is unmet.
+ */
+export async function validateRegistrationPrerequisites(
+  options: RegistrationPrerequisiteOptions = {},
+): Promise<void> {
+  const client = options.publicClient || botchainPublicClient
+
+  // 1. Validate chain ID 968
+  if (options.walletChainId !== undefined && options.walletChainId !== BOTCHAIN_TESTNET.chainId) {
+    throw new Error(
+      `Incorrect network: Connected wallet is on chain ID ${options.walletChainId}. Bohr Testnet (chain ID ${BOTCHAIN_TESTNET.chainId}) is required.`,
+    )
+  }
+
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!address || !isAddress(address) || address.toLowerCase() === ZERO_ADDRESS) {
+    throw new Error(
+      'No verified Bohr Testnet registry contract address configured. Set a valid address before initiating live on-chain operations.',
+    )
+  }
+
+  // 2. Check contract bytecode exists at configured address
+  const bytecode = await client.getBytecode({ address }).catch(() => null)
+  if (!bytecode || bytecode === '0x') {
+    throw new Error(
+      `No contract bytecode found at configured address ${address}. Deployment to Bohr Testnet is required.`,
+    )
+  }
+
+  // 3. Validate ABI and expected registry interface
+  try {
+    await client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'publicRegistrationEnabled',
+    })
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err)
+    throw new Error(
+      `Contract at ${address} does not implement the expected BotChainDatasetRegistry interface: ${detail}`,
+    )
+  }
+
+  // 4. Confirm submitting wallet's permissions (if account provided)
+  if (options.account) {
+    const isPublic = await client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'publicRegistrationEnabled',
+    })
+
+    if (!isPublic) {
+      const ownerAddress = await client.readContract({
+        address,
+        abi: botChainRegistryAbi,
+        functionName: 'owner',
+      })
+
+      const isOwner = ownerAddress.toLowerCase() === options.account.toLowerCase()
+      if (!isOwner) {
+        const isAllowed = await client.readContract({
+          address,
+          abi: botChainRegistryAbi,
+          functionName: 'authorizedSubmitters',
+          args: [options.account],
+        })
+
+        if (!isAllowed) {
+          throw new Error(
+            `Submitting wallet ${options.account} lacks permission to register datasets (public registration is disabled and account is not allowlisted).`,
+          )
+        }
+      }
+    }
+  }
+
+  // 5. Confirm sufficient test gas (if account provided)
+  if (options.account) {
+    const balance = await client.getBalance({ address: options.account }).catch(() => 0n)
+    const minRequiredGasWei = 500_000_000_000_000n
+    if (balance < minRequiredGasWei) {
+      throw new Error(
+        `Insufficient gas funds on Bohr Testnet: Wallet ${options.account} has ${balance} wei. Faucet allocation required before submitting live transactions.`,
+      )
+    }
+  }
 }
 
 export async function readBotchainDataset(datasetId: `0x${string}`) {
-  if (!isBotchainContractDeployed()) {
-    throw new Error('BotChainDatasetRegistry is not yet deployed on Bohr Testnet.')
+  await ensureRegistryExists()
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!address) {
+    throw new Error('BotChainDatasetRegistry is not deployed or configured on Bohr Testnet.')
   }
 
-  await ensureRegistryExists()
   return botchainPublicClient.readContract({
-    address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress,
+    address,
     abi: botChainRegistryAbi,
     functionName: 'getDataset',
     args: [datasetId],
   })
 }
 
-export async function submitBotchainDataset(params: {
+export interface SubmitBotchainDatasetParams {
   account: `0x${string}`
   datasetId: `0x${string}`
   datasetHash: `0x${string}`
   version: string
   metadataURI: string
-}): Promise<`0x${string}`> {
+  walletChainId?: number
+}
+
+/**
+ * Submits dataset registration on Bohr Testnet with rigorous end-to-end verification:
+ * 1. Checks RPC network and contract existence.
+ * 2. Validates wallet chain ID and account identity.
+ * 3. Executes walletClient.writeContract().
+ * 4. Awaits the genuine transaction receipt.
+ * 5. Requires successful receipt status.
+ * 6. Returns the genuine transaction hash.
+ */
+export async function submitBotchainDataset(
+  params: SubmitBotchainDatasetParams,
+): Promise<Hex> {
+  await ensureRegistryExists()
+
   const walletClient = getBotchainWalletClient()
   if (!walletClient) {
     throw new Error('No Ethereum wallet connected for Bohr Testnet transaction.')
   }
 
-  if (!isBotchainContractDeployed()) {
-    throw new Error(
-      'BotChainDatasetRegistry contract address is not configured. Deploy the contract using script/DeployBotChainRegistry.s.sol before broadcasting live transactions.',
-    )
+  const actualChain = await walletClient.getChainId()
+  if (actualChain !== BOTCHAIN_TESTNET.chainId) {
+    throw new Error(`Wrong wallet chain: Bohr Testnet (Chain ID ${BOTCHAIN_TESTNET.chainId}) required.`)
   }
 
-  await ensureRegistryExists()
-  const actualChain = await walletClient.getChainId()
-  if (actualChain !== BOTCHAIN_TESTNET.chainId) throw new Error('Wrong wallet chain: Bohr Testnet 968 required.')
+  if (params.walletChainId !== undefined && params.walletChainId !== BOTCHAIN_TESTNET.chainId) {
+    throw new Error(`Wrong wallet chain: Bohr Testnet (Chain ID ${BOTCHAIN_TESTNET.chainId}) required.`)
+  }
+
   const accounts = await walletClient.getAddresses()
-  if (!accounts.some((a) => a.toLowerCase() === params.account.toLowerCase())) throw new Error('Wallet account mismatch.')
-  const hash = await walletClient.writeContract({
+  if (!accounts.some((a) => a.toLowerCase() === params.account.toLowerCase())) {
+    throw new Error('Wallet account mismatch: Connected account does not match requested signer.')
+  }
+
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!address) {
+    throw new Error('Registry address not configured.')
+  }
+
+  // Submit on-chain transaction
+  const txHash = await walletClient.writeContract({
     chain: botchainTestnetChain,
     account: params.account,
-    address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress,
+    address,
     abi: botChainRegistryAbi,
     functionName: 'registerDataset',
     args: [params.datasetId, params.datasetHash, params.version, params.metadataURI],
   })
 
-  const receipt = await botchainPublicClient.waitForTransactionReceipt({ hash, confirmations: 1 })
-  if (receipt.status !== 'success' || receipt.transactionHash.toLowerCase() !== hash.toLowerCase()) throw new Error('BOT Chain transaction reverted or failed.')
-  return hash
-}
+  // Wait for actual transaction receipt
+  const receipt = await botchainPublicClient.waitForTransactionReceipt({ hash: txHash, confirmations: 1 })
 
-async function ensureRegistryExists() {
-  const chainId = await botchainPublicClient.getChainId()
-  if (chainId !== BOTCHAIN_TESTNET.chainId) throw new Error('BOT Chain RPC network mismatch.')
-  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
-  if (!isBotchainContractDeployed()) throw new Error('BOT Chain registry address not configured.')
-  const bytecode = await botchainPublicClient.getBytecode({ address })
-  if (!bytecode || bytecode === '0x') throw new Error('BOT Chain contract bytecode not deployed at configured address.')
+  // Require successful status
+  if (receipt.status !== 'success' || receipt.transactionHash.toLowerCase() !== txHash.toLowerCase()) {
+    throw new Error(
+      `BOT Chain transaction failed or reverted on-chain with status "${receipt.status}". Tx: ${txHash}`,
+    )
+  }
+
+  return txHash
 }

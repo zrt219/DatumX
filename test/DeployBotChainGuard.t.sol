@@ -6,8 +6,9 @@ import {DeployBotChainRegistry} from "../script/DeployBotChainRegistry.s.sol";
 
 contract DeployBotChainGuardTest is Test {
     function testDeploymentRejectsUnexpectedChainBeforeReadingKeys() public {
+        DeployBotChainRegistry script = new DeployBotChainRegistry();
         vm.chainId(1);
         vm.expectRevert(DeployBotChainRegistry.InvalidTargetChain.selector);
-        new DeployBotChainRegistry().run();
+        script.run();
     }
 }

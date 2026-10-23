@@ -4,7 +4,7 @@
 **Reference Origin**: `zrt219-patch-1` (Commit `57ca541e58aa942cb2faf469b0ae62878fe21a15`)  
 **Target Review Date**: Friday, October 23, 2026  
 **Audience**: Leon, Roy, and Josh (BOT Chain Core Team) & ZRT Protocol Team  
-**Audit & Readiness Verdict**: **VERIFIED & AUDITED (VICTORY CONFIRMED)**  
+**Audit & Readiness Verdict**: **LOCALLY VERIFIED & AUDITED (Awaiting Testnet Authorization & Faucet)**  
 
 ---
 
@@ -14,7 +14,7 @@ This branch establishes an isolated, lightweight, and high-integrity **BOT Chain
 
 ### Core Strategic Mandates:
 1. **Zero Impact on Canonical XRPL EVM Testnet**: The existing V5 deployment on XRPL EVM Testnet (Chain ID `1449000`), its deployment manifest (`deployments/xrpl-testnet.json`), contracts, and recorded lineage proofs (`1->2`, `3->4`, `5->6`, `7->8`) remain 100% independent and untouched.
-2. **Deterministic Cryptographic Verification**: Proves that dataset releases can be registered, retrieved, and cryptographically verified on-chain using canonical RFC-8785 JSON serialization and SHA-256 hashing.
+2. **Deterministic Cryptographic Verification**: Proves that dataset releases can be registered, retrieved, and cryptographically verified on-chain using canonical RFC 8785 JSON serialization and SHA-256 hashing.
 3. **Honest Architectural Boundaries**: Completely avoids simulated or fabricated transaction hashes (`Math.random()`), providing honest client-side staging when un-deployed and real viem contract client bindings for live Bohr Testnet deployment.
 4. **Clean Code Separation**: All pilot contracts, configurations, ABIs, test runners, and handoff dossiers live strictly on `feature/botchain-registry-pilot`.
 
@@ -77,23 +77,27 @@ This branch establishes an isolated, lightweight, and high-integrity **BOT Chain
     - `getDataset(bytes32 datasetId)`: Constant-time $O(1)$ state retrieval. Reverts with `RecordNotFound()` if the record does not exist.
     - `verifyDatasetHash(bytes32 datasetId, bytes32 candidateHash)`: On-chain cryptographic comparison between stored hash and external candidate hash.
   - **Permission Model**:
-    - `canRegister`: Restricts writes to authorized submitters when closed, or allows open testnet registrations when `publicRegistrationEnabled == true`.
+    - `canRegister`: Restricts writes to authorized submitters or contract owner when closed, or allows open testnet registrations when `publicRegistrationEnabled == true`.
     - `setPublicRegistration(bool)` & `setAuthorizedSubmitter(address, bool)`: Owner-restricted administrative functions.
 - **Deployment Script**: [`script/DeployBotChainRegistry.s.sol`](script/DeployBotChainRegistry.s.sol)
-  - Deterministic Foundry script asserting `block.chainid == 968 || block.chainid == 31337` to guarantee zero accidental broadcast to other networks.
-- **Contract Tests**: [`test/BotChainDatasetRegistry.t.sol`](test/BotChainDatasetRegistry.t.sol)
-  - 12 comprehensive unit test cases validating registration success, duplicate rejection, zero-parameter validation, getter functions, and access control.
+  - Hard-reverts on unsupported networks or mainnet (`677`, `1`).
+  - Requires explicit authorization (`BOTCHAIN_DEPLOY_AUTHORIZED=true`) and explicitly configured private key (`BOTCHAIN_PRIVATE_KEY != 0`). Removed public Anvil key fallback.
+  - Defaults registry permissions to allowlisted registration unless public registration is explicitly approved.
+- **Contract Tests**:
+  - [`test/BotChainDatasetRegistry.t.sol`](test/BotChainDatasetRegistry.t.sol): 8 unit test cases validating registration success, duplicate rejection, zero-parameter validation, getter functions, and access control.
+  - [`test/DeployBotChainRegistry.t.sol`](test/DeployBotChainRegistry.t.sol): 8 deployment security test cases verifying hard reverts on mainnet/unsupported chains, authorization gates, and permission defaults.
 
 ### B. Client Cryptography & Serialization (`src/lib/`)
 - **File**: [`src/lib/canonicalHash.ts`](src/lib/canonicalHash.ts)
-  - **RFC-8785 Canonical JSON Serialization** (`canonicalJsonStringify`):
-    - Recursively traverses JSON objects and sorts keys alphabetically prior to serialization.
-    - Guarantees that `{ a: 1, b: 2 }` and `{ b: 2, a: 1 }` generate identical byte arrays.
+  - **RFC 8785 Canonical JSON Serialization** (`canonicalJsonStringify`):
+    - Recursively traverses JSON objects and sorts keys by UTF-16 code units prior to serialization.
+    - Tested against official RFC 8785 Section 3.2 vectors for key ordering, number formatting, and literal preservation.
   - **Web Crypto SHA-256** (`computeSha256Hex`):
     - Native browser cryptographic digest producing standardized `0x`-prefixed 64-character hexadecimal hashes.
 - **File**: [`src/lib/botchainClient.ts`](src/lib/botchainClient.ts)
   - Real `viem` contract client interface connecting `botChainRegistryAbi` with `publicClient` and `walletClient`.
-  - Implements `submitBotchainDataset` for live `walletClient.writeContract` execution.
+  - Implements 5 fail-closed pre-flight checks (`validateRegistrationPrerequisites`): chain ID 968 validation, bytecode existence check, ABI compatibility, submitting wallet permissions, and gas sufficiency check.
+  - Implements `submitBotchainDataset` executing `walletClient.writeContract`, awaiting genuine transaction receipt, verifying successful status, independently reading back on-chain record via RPC public client, and cryptographically validating the input hash against retrieved state.
   - Implements `readBotchainDataset` for live `publicClient.readContract` execution.
   - Provides `isBotchainContractDeployed()` detection to seamlessly toggle between live on-chain execution and honest client-side staging.
 - **File**: [`src/lib/network.ts`](src/lib/network.ts)
@@ -102,67 +106,65 @@ This branch establishes an isolated, lightweight, and high-integrity **BOT Chain
 
 ### C. Interactive Frontend Console (`src/components/botchain/`)
 - **File**: [`src/components/botchain/BotChainPilotPanel.tsx`](src/components/botchain/BotChainPilotPanel.tsx)
-  - **Deployment Posture Banner**: Clearly identifies whether the registry contract is active on Bohr Testnet or operating in client staging mode awaiting faucet gas.
+  - **Deployment Posture Banner**: Clearly identifies whether the registry contract is active on Bohr Testnet or operating in local simulation mode. Displays `LOCAL SIMULATION — NO ON-CHAIN TRANSACTION` when undeployed.
   - **Step 1 — Register Dataset**:
     - Interactive synthetic payload editor with preloaded clean energy benchmark data.
     - One-click "Canonicalize & Hash" generating deterministic SHA-256.
     - Submits live transaction via wallet if deployed, or stages record cleanly without fake transaction hashes.
   - **Step 2 — Read Stored Record**:
     - Real-time display of on-chain/staged attributes: `Dataset ID`, `Stored Content Hash`, `Version`, `Timestamp`, and `Submitter Address`.
-    - If live on-chain, provides a direct clickable link to Bohr block explorer.
+    - If live on-chain, provides a direct clickable link to Bohr block explorer. If staged in simulation, clearly discloses that no on-chain transaction exists.
   - **Step 3 — Verify Integrity**:
     - Candidate payload editor allowing real-time modification of parameters.
     - Recalculates SHA-256 and compares against stored hash:
-      - Untampered: Displays prominent green `MATCH [RECORD INTEGRITY VERIFIED]`.
-      - Tampered (even 1 character or decimal): Displays prominent red `MISMATCH [PAYLOAD ALTERED]`.
+      - Live on-chain: Displays `MATCH [ON-CHAIN RECORD INTEGRITY VERIFIED]`.
+      - Local simulation: Disables claims of on-chain verification; displays `MATCH [LOCAL SIMULATION ONLY — NOT ON-CHAIN]`.
+      - Tampered: Displays prominent red `MISMATCH [PAYLOAD ALTERED]`.
 
 ---
 
 ## 4. Verification, Testing & Audits
 
-### A. 100-Iteration Stress Testing Loop
-Conducted across all layers to prove zero timing flakes, memory stability, and gas determinism:
-- **Foundry Smart Contracts (`forge test`)**:
-  - Invocations: **100 consecutive runs** (4,200 total test executions).
-  - Pass Rate: **100% (100/100 passed)**.
-  - Gas Determinism: `testRegisterDatasetSuccess` = 247,755 gas across all 100 iterations ($\Delta = 0$).
-  - Mean Latency: 1,006.00 ms.
-- **Vitest Frontend Suites (`npx vitest run`)**:
-  - Invocations: **100 consecutive runs** (1,700 total assertions across 7 test files).
-  - Pass Rate: **100% (100/100 passed)**.
-  - Heap Stability: Node coordinator heap remained steady (34 MB to 54 MB) with zero IPC handle leaks.
-  - Mean Latency: 3,814.69 ms.
-- **Headless Playwright Browser UI (`stress_playwright.js`)**:
-  - Invocations: **100 consecutive runs** (1,300 total UI steps verified against production preview server).
-  - Pass Rate: **100% (100/100 passed)**.
-  - Console Health: **0 unhandled exceptions, 0 console errors**.
-  - Mean Latency: 601.54 ms.
+### A. Execution Log Evidence
+- **Foundry Smart Contracts (`forge test -vv`)**:
+  - Invocations: **47 total unit tests across 4 suites**.
+  - `test/DatumXProtocol.t.sol`: 30 passed (XRPL canonical suite).
+  - `test/BotChainDatasetRegistry.t.sol`: 8 passed (BOT Chain registry suite).
+  - `test/DeployBotChainRegistry.t.sol`: 8 passed (Deployment security suite).
+  - `test/DeployBotChainGuard.t.sol`: 1 passed (Deployment guard suite).
+  - Pass Rate: **100% (47/47 passed, 0 failed, 0 skipped)**.
+- **Vitest Frontend Suites (`npm run test`)**:
+  - Invocations: **45 total tests across 10 test suites**.
+  - `src/test/canonicalHashStrict.test.ts`: 4 passed (strict RFC 8785 rejection).
+  - `src/test/canonicalHash.test.ts`: 6 passed (RFC 8785 Section 3.2 vectors & sorting).
+  - `src/test/botchainClient.test.ts`: 7 passed (client security & network refusal).
+  - `src/test/network.test.ts`: 7 passed.
+  - `src/test/useDrillProofTransactions.test.tsx`: 2 passed.
+  - `src/test/useWallet.test.tsx`: 1 passed.
+  - `src/test/LineageGraph.test.tsx`: 1 passed.
+  - `src/test/useDrillProof.test.tsx`: 2 passed.
+  - `src/test/botchainIntegration.test.ts`: 14 passed (5 fail-closed pre-flight checks, negative receipt tests, and write/readback verification).
+  - `src/test/app.test.tsx`: 1 passed.
+  - Pass Rate: **100% (45/45 passed, 0 failed, 0 skipped)**.
+- **TypeScript Production Build (`npm run build`)**:
+  - Clean production build (`tsc -b && vite build`) bundling 2,160 modules in 9.91s with 0 errors.
+- **ESLint Code Quality (`npm run lint`)**:
+  - Clean lint inspection with 0 errors and 0 warnings.
 
-### B. 3 Multi-Layer Smoke Tests
-Executed via parallel multi-agent teamwork architecture:
-- **Smoke Test 1 (Full Protocol Verification Pipeline)**:
-  - Validated clean production build (`tsc -b && vite build`) bundling 2,158 modules in 1.22s.
-  - All 42 Foundry contract unit tests and 17 Vitest tests passed.
-- **Smoke Test 2 (BOT Chain Synthetic Registry E2E Pipeline)**:
-  - Registered under `npm run smoke:botchain` (`scripts/smoke-test-botchain-pipeline.ts`).
-  - Validated 4-stage pipeline: RFC-8785 canonicalization, SHA-256 digest computation, registry state emulation, and 100% tamper detection across 288 mutation positions (49.22% bit-flip avalanche).
-- **Smoke Test 3 (Headless Browser & UI Console Smoke Test)**:
-  - Implemented in `scripts/smoke-test-browser.cjs`.
-  - Traversed all 8 console views (`overview`, `datasets`, `validation`, `validators`, `audit`, `governance`, `botchain`, `settings`).
-  - Validated dynamic network badges (Chain ID `1449000` vs `968`) and interactive Register/Verify states with 0 console errors.
+### B. Disclosure of Browser Test Mocks
+- **Headless Browser Test (`scripts/smoke-test-browser.cjs`)**: Injects a mock EIP-1193 Ethereum provider (`window.ethereum`) with synthetic accounts (`0x90F7...`) to test navigation and network badges across headless Chromium without a physical wallet extension.
+- **Frontend Unit Tests (`src/test/*.test.tsx`)**: Use Vitest mocks for React hook state and viem client methods to isolate component rendering.
+- **Console Demo Views (`src/data/demoData.ts`)**: Display static benchmark records when no live wallet is connected.
 
-### C. Independent Clean-Room Victory Audit
-- **Auditor**: `teamwork_preview_victory_auditor`
-- **Phase A (Timeline & Provenance)**: PASSED (Verified git branch lineage and commit integrity).
-- **Phase B (Anti-Cheating & Invariant Audit)**: PASSED (Zero skipped tests, zero mock bypasses, genuine cryptographic hashing).
-- **Phase C (Independent Re-Execution)**: PASSED (All 3 smoke tests independently re-executed and verified).
-- **Final Verdict**: Historical local smoke tests reported; live chain integration requires additional evidence.
+### C. Clean-Room Verification Status
+- **Anti-Cheating & Invariant Check**: Zero skipped tests, zero mock transaction hashes, real viem writeContract / waitForTransactionReceipt / readContract workflow implemented.
+- **Verification Status**: **Locally Verified & Audited**. Live testnet broadcast held safely until deployment is explicitly authorized and funded.
 
 ---
 
 ## 5. Security, Ownership & Asset Protection Audit
 
-- **Open Source MIT Status**: All new code created on this branch is licensed under MIT.
+- **Licensing Disclosure**: There is currently no root `LICENSE` file committed to the repository. While internal pilot files contain SPDX MIT headers, repository-wide licensing and external code reuse rights require explicit authorization from project ownership (ZRT Protocol team).
 - **Proprietary Exploration Asset Exclusion**:
   - The pilot uses **strictly synthetic public benchmark datasets**.
   - Commercial mining borehole logs, gamma traces, and confidential survey references (Noble Plains Uranium) are strictly excluded from the pilot.
@@ -189,9 +191,9 @@ Executed via parallel multi-agent teamwork architecture:
 ### Branch Metadata
 - **Branch**: [`feature/botchain-registry-pilot`](https://github.com/zrt219/DatumX/tree/feature/botchain-registry-pilot)
 - **Git Remote**: `https://github.com/zrt219/DatumX.git`
-- **Status**: Review branch with new safeguards and pending CI; do not claim live BOT Chain deployment.
-
+- **Current HEAD SHA**: Query dynamically via `git rev-parse HEAD`.
+- **Status**: Review branch with new safeguards, locally verified and audited; live BOT Chain testnet deployment blocked pending explicit authorization and funded deployer key.
 
 ## Current review caveat
 
-Earlier smoke tests relied on emulated registries and mocked browser wallets. The current branch adds hard chain/network and signer checks, bytecode existence checks, transaction receipt confirmation, and stricter client-side status labeling. The old 100-run claims do not replace independent current-commit verification. The real Bohr testnet contract address and receipt are not yet supplied. No mainnet deployment is authorized.
+Earlier smoke tests relied on emulated registries and mocked browser wallets. The current branch adds hard chain/network and signer checks, bytecode existence checks, transaction receipt confirmation, and strict client-side status labeling (`LOCAL SIMULATION — NO ON-CHAIN TRANSACTION`). The real Bohr testnet contract address and receipt are not yet supplied as no deployment is authorized. No mainnet deployment is authorized.
