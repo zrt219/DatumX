@@ -11,24 +11,24 @@ import {BotChainDatasetRegistry} from "../contracts/botchain/BotChainDatasetRegi
  * @dev Intended for execution on Bohr Testnet (Chain ID 968).
  */
 contract DeployBotChainRegistry is Script {
+    error InvalidTargetChain(uint256 chainId);
+    error MissingDeployerKey();
     function run() external returns (address registryAddress) {
         uint256 chainId = block.chainid;
         console2.log("Deploying BotChainDatasetRegistry on Chain ID:", chainId);
 
         // Security check: Guard against accidental deployment to unintended networks
         if (chainId != 968 && chainId != 31337) {
-            console2.log("WARNING: Target chain is not Bohr Testnet (968) or local anvil (31337)!");
+            revert InvalidTargetChain(chainId);
         }
 
-        uint256 deployerPrivateKey = vm.envOr(
-            "BOTCHAIN_PRIVATE_KEY",
-            uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80) // Anvil default test key fallback
-        );
+        uint256 deployerPrivateKey = vm.envOr("BOTCHAIN_PRIVATE_KEY", uint256(0));
+        if (deployerPrivateKey == 0) revert MissingDeployerKey();
 
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy with public registration enabled for seamless Friday technical walkthrough
-        BotChainDatasetRegistry registry = new BotChainDatasetRegistry(true);
+        BotChainDatasetRegistry registry = new BotChainDatasetRegistry(false);
         registryAddress = address(registry);
 
         vm.stopBroadcast();
