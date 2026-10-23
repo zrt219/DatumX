@@ -1,0 +1,85 @@
+export const botChainRegistryAbi = [
+  {
+    type: 'constructor',
+    inputs: [{ name: 'allowPublicRegistration', type: 'bool', internalType: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'registerDataset',
+    inputs: [
+      { name: 'datasetId', type: 'bytes32', internalType: 'bytes32' },
+      { name: 'datasetHash', type: 'bytes32', internalType: 'bytes32' },
+      { name: 'version', type: 'string', internalType: 'string' },
+      { name: 'metadataURI', type: 'string', internalType: 'string' },
+    ],
+    outputs: [{ name: '', type: 'bool', internalType: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'getDataset',
+    inputs: [{ name: 'datasetId', type: 'bytes32', internalType: 'bytes32' }],
+    outputs: [
+      {
+        name: '',
+        type: 'tuple',
+        internalType: 'struct BotChainDatasetRegistry.DatasetRecord',
+        components: [
+          { name: 'datasetId', type: 'bytes32', internalType: 'bytes32' },
+          { name: 'datasetHash', type: 'bytes32', internalType: 'bytes32' },
+          { name: 'version', type: 'string', internalType: 'string' },
+          { name: 'metadataURI', type: 'string', internalType: 'string' },
+          { name: 'submitter', type: 'address', internalType: 'address' },
+          { name: 'timestamp', type: 'uint64', internalType: 'uint64' },
+          { name: 'exists', type: 'bool', internalType: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'verifyDatasetHash',
+    inputs: [
+      { name: 'datasetId', type: 'bytes32', internalType: 'bytes32' },
+      { name: 'candidateHash', type: 'bytes32', internalType: 'bytes32' },
+    ],
+    outputs: [{ name: '', type: 'bool', internalType: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'totalRecords',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256', internalType: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'owner',
+    inputs: [],
+    outputs: [{ name: '', type: 'address', internalType: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'publicRegistrationEnabled',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool', internalType: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'event',
+    name: 'DatasetRegistered',
+    inputs: [
+      { name: 'datasetId', type: 'bytes32', indexed: true, internalType: 'bytes32' },
+      { name: 'datasetHash', type: 'bytes32', indexed: true, internalType: 'bytes32' },
+      { name: 'version', type: 'string', indexed: false, internalType: 'string' },
+      { name: 'metadataURI', type: 'string', indexed: false, internalType: 'string' },
+      { name: 'submitter', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'timestamp', type: 'uint64', indexed: false, internalType: 'uint64' },
+    ],
+    anonymous: false,
+  },
+] as const

@@ -1,4 +1,4 @@
-import { Database, FileCheck2, GanttChartSquare, Scale, ScrollText, Settings, ShieldCheck } from 'lucide-react'
+import { Database, FileCheck2, GanttChartSquare, Scale, ScrollText, Settings, ShieldCheck, Cpu } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { NavKey } from '../../types'
 import { datumTagline } from '../../content/settingsContent'
@@ -21,6 +21,10 @@ const navGroups = [
       { key: 'audit', label: 'Audit Trail', icon: ScrollText },
       { key: 'governance', label: 'Governance', icon: Scale },
     ],
+  },
+  {
+    label: 'Pilot Integrations',
+    items: [{ key: 'botchain', label: 'BOT Chain Pilot', icon: Cpu }],
   },
   {
     label: 'System',

@@ -12,6 +12,7 @@ const GovernancePage = lazy(async () => ({ default: (await import('./components/
 const SettingsPage = lazy(async () => ({ default: (await import('./components/dashboard/SettingsPage')).SettingsPage }))
 const ValidationPage = lazy(async () => ({ default: (await import('./components/dashboard/ValidationPage')).ValidationPage }))
 const ValidatorsPage = lazy(async () => ({ default: (await import('./components/dashboard/ValidatorsPage')).ValidatorsPage }))
+const BotChainPilotPanel = lazy(async () => ({ default: (await import('./components/botchain/BotChainPilotPanel')).BotChainPilotPanel }))
 
 function PageFallback() {
   return <div className="rounded-[18px] bg-white/[0.025] px-5 py-4 text-sm text-slate-300">Loading console view...</div>
@@ -95,6 +96,7 @@ export default function App() {
         {datumx.activeNav === 'validators' ? <ValidatorsPage validators={datumx.validatorsList} /> : null}
         {datumx.activeNav === 'audit' ? <AuditTrailPage events={datumx.timeline} getExplorerTxUrl={datumx.getExplorerTxUrl} /> : null}
         {datumx.activeNav === 'governance' ? <GovernancePage projects={datumx.projects} /> : null}
+        {datumx.activeNav === 'botchain' ? <BotChainPilotPanel wallet={wallet} onRefreshWallet={connectWallet} /> : null}
         {datumx.activeNav === 'settings' ? <SettingsPage compatibilityNotice={datumx.liveCompatibilityNotice} /> : null}
       </Suspense>
     </AppShell>
