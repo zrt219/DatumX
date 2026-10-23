@@ -68,7 +68,7 @@ class EmulatedBotChainRegistry {
       submitter,
       timestamp,
       exists: true,
-      txHash: '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
+      txHash: undefined, // Simulated record: strictly NO fabricated or random transaction hashes
     }
 
     this.records.set(datasetId, record)
@@ -229,7 +229,7 @@ export async function runBotChainPipelineSmokeTest() {
   console.log(`          - submitter   : ${storedRecord.submitter}`)
   console.log(`          - timestamp   : ${storedRecord.timestamp}`)
   console.log(`          - exists      : ${storedRecord.exists}`)
-  console.log(`          - txHash      : ${storedRecord.txHash}`)
+  console.log(`          - txHash      : ${storedRecord.txHash || 'None (Emulated Simulation — No Fake On-Chain Hash)'}`)
   console.log(`  [State] Total Records Registered: ${registry.totalRecords()}`)
 
   if (storedRecord.datasetHash !== datasetHash || storedRecord.datasetId !== datasetId) {

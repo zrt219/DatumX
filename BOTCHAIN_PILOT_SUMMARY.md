@@ -134,18 +134,18 @@ This branch establishes an isolated, lightweight, and high-integrity **BOT Chain
   - `test/DeployBotChainGuard.t.sol`: 1 passed (Deployment guard suite).
   - Pass Rate: **100% (47/47 passed, 0 failed, 0 skipped)**.
 - **Vitest Frontend Suites (`npm run test`)**:
-  - Invocations: **45 total tests across 10 test suites**.
+  - Invocations: **50 total tests across 10 test suites**.
   - `src/test/canonicalHashStrict.test.ts`: 4 passed (strict RFC 8785 rejection).
   - `src/test/canonicalHash.test.ts`: 6 passed (RFC 8785 Section 3.2 vectors & sorting).
-  - `src/test/botchainClient.test.ts`: 7 passed (client security & network refusal).
+  - `src/test/botchainClient.test.ts`: 10 passed (client security, pre-flight prerequisites & network refusal).
   - `src/test/network.test.ts`: 7 passed.
   - `src/test/useDrillProofTransactions.test.tsx`: 2 passed.
   - `src/test/useWallet.test.tsx`: 1 passed.
   - `src/test/LineageGraph.test.tsx`: 1 passed.
   - `src/test/useDrillProof.test.tsx`: 2 passed.
-  - `src/test/botchainIntegration.test.ts`: 14 passed (5 fail-closed pre-flight checks, negative receipt tests, and write/readback verification).
+  - `src/test/botchainIntegration.test.ts`: 16 passed (5 fail-closed pre-flight checks, negative receipt tests, and write/readback verification).
   - `src/test/app.test.tsx`: 1 passed.
-  - Pass Rate: **100% (45/45 passed, 0 failed, 0 skipped)**.
+  - Pass Rate: **100% (50/50 passed, 0 failed, 0 skipped)**.
 - **TypeScript Production Build (`npm run build`)**:
   - Clean production build (`tsc -b && vite build`) bundling 2,160 modules in 9.91s with 0 errors.
 - **ESLint Code Quality (`npm run lint`)**:

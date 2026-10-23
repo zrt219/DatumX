@@ -90,15 +90,27 @@ export async function validateRegistrationPrerequisites(
 ): Promise<void> {
   const client = options.publicClient || botchainPublicClient
 
-  // 1. Validate chain ID 968
+  // 1. Validate chain ID 968 (wallet and RPC)
   if (options.walletChainId !== undefined && options.walletChainId !== BOTCHAIN_TESTNET.chainId) {
     throw new Error(
       `Incorrect network: Connected wallet is on chain ID ${options.walletChainId}. Bohr Testnet (chain ID ${BOTCHAIN_TESTNET.chainId}) is required.`,
     )
   }
 
+  const rpcChainId = await client.getChainId().catch(() => 0)
+  if (rpcChainId !== 0 && rpcChainId !== BOTCHAIN_TESTNET.chainId) {
+    throw new Error(
+      `Incorrect RPC network: Connected RPC is on chain ID ${rpcChainId}. Bohr Testnet (chain ID ${BOTCHAIN_TESTNET.chainId}) is required.`,
+    )
+  }
+
   const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
-  if (!address || !isAddress(address) || address.toLowerCase() === ZERO_ADDRESS) {
+  if (
+    !address ||
+    !isAddress(address) ||
+    address.toLowerCase() === ZERO_ADDRESS ||
+    address.toLowerCase() === '0x1234567890123456789012345678901234567890'
+  ) {
     throw new Error(
       'No verified Bohr Testnet registry contract address configured. Set a valid address before initiating live on-chain operations.',
     )
@@ -207,7 +219,11 @@ export interface SubmitBotchainDatasetParams {
 export async function submitBotchainDataset(
   params: SubmitBotchainDatasetParams,
 ): Promise<Hex> {
-  await ensureRegistryExists()
+  // Validate all 5 prerequisites fail-closed before broadcasting
+  await validateRegistrationPrerequisites({
+    walletChainId: params.walletChainId,
+    account: params.account,
+  })
 
   const walletClient = getBotchainWalletClient()
   if (!walletClient) {

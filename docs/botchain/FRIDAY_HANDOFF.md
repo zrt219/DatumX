@@ -41,7 +41,7 @@ The canonical DatumX V5 release-governance architecture on XRPL EVM Testnet rema
 | Status Tier | Scope & Features | Evidence / Artifacts |
 |---|---|---|
 | **Implemented** | • Standalone registry contract: `BotChainDatasetRegistry.sol`<br>• Hardened deployment script: `DeployBotChainRegistry.s.sol`<br>• Dual-network config: `botchainConfig.ts`<br>• Cryptographic serialization: `canonicalHash.ts`<br>• Interactive pilot panel: `BotChainPilotPanel.tsx`<br>• Fail-closed client & write/read workflow: `botchainClient.ts` | • `contracts/botchain/BotChainDatasetRegistry.sol`<br>• `script/DeployBotChainRegistry.s.sol`<br>• `src/lib/botchainClient.ts`<br>• `src/components/botchain/BotChainPilotPanel.tsx` |
-| **Locally Tested** | • 47 Solidity unit tests (30 XRPL protocol + 8 BOT Chain registry + 8 deployment security tests + 1 deployment guard test)<br>• 45 Vitest unit and integration tests across 10 test suites<br>• Zero-error TypeScript build (`tsc -b && vite build`)<br>• Clean ESLint check (`eslint .`)<br>• RFC 8785 test vectors evaluated for ordering, literals, and number serialization | • `forge test -vv` (47/47 passed)<br>• `npm run test` (45/45 passed)<br>• `npm run build` (Clean production bundle)<br>• `npm run lint` (0 errors, 0 warnings) |
+| **Locally Tested** | • 47 Solidity unit tests (30 XRPL protocol + 8 BOT Chain registry + 8 deployment security tests + 1 deployment guard test)<br>• 50 Vitest unit and integration tests across 10 test suites<br>• Zero-error TypeScript build (`tsc -b && vite build`)<br>• Clean ESLint check (`eslint .`)<br>• RFC 8785 test vectors evaluated for ordering, literals, and number serialization | • `forge test -vv` (47/47 passed)<br>• `npm run test` (50/50 passed)<br>• `npm run build` (Clean production bundle)<br>• `npm run lint` (0 errors, 0 warnings) |
 | **Testnet Verified** | • Bohr Testnet RPC responsiveness and chain identity confirmed live | • `https://rpc.bohr.life` responds with Chain ID `968` |
 | **Blocked** | • Live Bohr Testnet contract deployment broadcast<br>• Live on-chain transaction submission and block explorer confirmation | • **Blocker 1**: No explicit deployment authorization (`BOTCHAIN_DEPLOY_AUTHORIZED=true` not set)<br>• **Blocker 2**: No funded deployment signing key (`BOTCHAIN_PRIVATE_KEY` not configured; Anvil fallback removed for security)<br>• **Blocker 3**: Test wallet requires faucet gas tokens |
 
@@ -83,19 +83,19 @@ Suite result: ok. 1 passed; 0 failed
 TOTAL: 47 passed; 0 failed; 0 skipped
 ```
 
-### B. Frontend Vitest Suite (45 Tests Total)
+### B. Frontend Vitest Suite (50 Tests Total)
 ```text
 Test Files  10 passed (10)
-Tests       45 passed (45)
+Tests       50 passed (50)
   ✓ src/test/canonicalHashStrict.test.ts (4 tests)
   ✓ src/test/canonicalHash.test.ts (6 tests)
-  ✓ src/test/botchainClient.test.ts (7 tests)
+  ✓ src/test/botchainClient.test.ts (10 tests)
   ✓ src/test/network.test.ts (7 tests)
   ✓ src/test/useDrillProofTransactions.test.tsx (2 tests)
   ✓ src/test/useWallet.test.tsx (1 test)
   ✓ src/test/LineageGraph.test.tsx (1 test)
   ✓ src/test/useDrillProof.test.tsx (2 tests)
-  ✓ src/test/botchainIntegration.test.ts (14 tests)
+  ✓ src/test/botchainIntegration.test.ts (16 tests)
   ✓ src/test/app.test.tsx (1 test)
 ```
 

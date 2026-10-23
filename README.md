@@ -14,7 +14,7 @@ This branch establishes an isolated **BOT Chain Dataset Registry Pilot** (Regist
 ### Executive Summary of Completed Deliverables:
 - **Smart Contract & Automation**: Standalone [`BotChainDatasetRegistry.sol`](contracts/botchain/BotChainDatasetRegistry.sol) storing cryptographic proofs (`SHA-256`), versions, and metadata pointers, paired with deterministic deployment script [`DeployBotChainRegistry.s.sol`](script/DeployBotChainRegistry.s.sol) targeting Bohr Testnet (Chain ID `968`).
 - **Two-Network Frontend**: Dual-network support ([`botchainConfig.ts`](src/lib/botchainConfig.ts)) with canonical JSON serialization ([`canonicalHash.ts`](src/lib/canonicalHash.ts)) and interactive pilot console ([`BotChainPilotPanel.tsx`](src/components/botchain/BotChainPilotPanel.tsx)) wired via real viem contract client bindings ([`botchainClient.ts`](src/lib/botchainClient.ts)).
-- **Tested & Verified (100% Green)**: 46 Foundry tests (30 XRPL protocol + 16 BOT Chain suite) and 35 Vitest tests passed with zero flakes, zero gas drift, and zero console errors; deployment hardening verified locally.
+- **Tested & Verified (100% Green)**: 47 Foundry tests (30 XRPL protocol + 17 BOT Chain registry & deployment security suite) and 50 Vitest tests passed with zero flakes, zero gas drift, and zero console errors; deployment hardening verified locally.
 - **Zero Regression**: Preserves all existing XRPL EVM Testnet V5 contracts, manifests ([`deployments/xrpl-testnet.json`](deployments/xrpl-testnet.json)), and lineage proofs (`1->2`, `3->4`, `5->6`, `7->8`).
 
 | Layer | XRPL EVM Testnet (Canonical) | BOT / Bohr Testnet (Pilot) | Status |
@@ -22,7 +22,7 @@ This branch establishes an isolated **BOT Chain Dataset Registry Pilot** (Regist
 | **Chain ID** | `1449000` (`0x161b28`) | `968` (`0x3c8`) | ✅ Verified |
 | **RPC URL** | `https://rpc.testnet.xrplevm.org/` | `https://rpc.bohr.life` | ✅ Verified |
 | **Scope** | Industrial Lineage & Auditor Closure | Minimal Dataset Proof Registry (Register → Read → Verify) | ✅ Complete |
-| **Contracts** | `DatasetRegistry`, `ProjectRouter`, etc. | `BotChainDatasetRegistry.sol` | ✅ Tested (46 Foundry / 35 Vitest) |
+| **Contracts** | `DatasetRegistry`, `ProjectRouter`, etc. | `BotChainDatasetRegistry.sol` | ✅ Tested (47 Foundry / 50 Vitest) |
 
 ---
 

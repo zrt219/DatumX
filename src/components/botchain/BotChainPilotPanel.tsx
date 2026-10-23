@@ -4,7 +4,7 @@ import { Panel } from '../shared/Panel'
 import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
 import { switchToBotChainTestnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
-import { isBotchainContractDeployed, readBotchainDataset, submitBotchainDataset } from '../../lib/botchainClient'
+import { isBotchainContractDeployed, readBotchainDataset, submitBotchainDataset, validateRegistrationPrerequisites } from '../../lib/botchainClient'
 import type { WalletState } from '../../types'
 
 interface BotChainPilotPanelProps {
@@ -111,6 +111,12 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         if (!wallet.account) {
           throw new Error('Please connect an authorized wallet on Bohr Testnet before submitting.')
         }
+
+        // Validate all 5 prerequisites fail-closed before live submission
+        await validateRegistrationPrerequisites({
+          walletChainId: wallet.chainId,
+          account: wallet.account as `0x${string}`,
+        })
 
         // Live on-chain write -> receipt -> readback -> verify pipeline
         const liveTx = await submitBotchainDataset({

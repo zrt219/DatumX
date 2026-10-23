@@ -64,6 +64,11 @@ describe('canonicalHash and deterministic serialization', () => {
       expect(parsed.numbers[2]).toBe(4.5)
       expect(parsed.numbers[3]).toBe(0.002)
       expect(parsed.numbers[4]).toBe(1e-27)
+
+      // 4. Full canonical string matches RFC 8785 Section 3.2 canonical output
+      expect(canonicalOutput).toBe(
+        `{"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":${JSON.stringify(inputVector.string)}}`,
+      )
     })
 
     it('evaluates RFC 8785 UTF-16 code unit property name sorting rules in serialization', () => {

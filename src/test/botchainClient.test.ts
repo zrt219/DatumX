@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getBytecode: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
   readContract: vi.fn(),
+  getBalance: vi.fn(),
   walletChainId: vi.fn(),
   walletAddresses: vi.fn(),
   writeContract: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock('viem', () => ({
     getBytecode: mocks.getBytecode,
     waitForTransactionReceipt: mocks.waitForTransactionReceipt,
     readContract: mocks.readContract,
+    getBalance: mocks.getBalance,
   }),
   createWalletClient: () => ({
     getChainId: mocks.walletChainId,
@@ -67,6 +69,8 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
     mocks.walletAddresses.mockResolvedValue([ACCOUNT])
     mocks.writeContract.mockResolvedValue(TX)
     mocks.waitForTransactionReceipt.mockResolvedValue({ status: 'success', transactionHash: TX })
+    mocks.readContract.mockResolvedValue(true)
+    mocks.getBalance.mockResolvedValue(10_000_000_000_000_000n)
   })
 
   it('waits for an actual successful receipt before returning a transaction hash', async () => {
@@ -90,6 +94,29 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
   it('refuses to broadcast to an address with no contract code', async () => {
     mocks.getBytecode.mockResolvedValue(undefined)
     await expect(submitBotchainDataset(args)).rejects.toThrow(/contract|bytecode|code/i)
+    expect(mocks.writeContract).not.toHaveBeenCalled()
+  })
+
+  it('refuses to broadcast if contract does not implement the expected registry ABI', async () => {
+    mocks.readContract.mockRejectedValue(new Error('Function publicRegistrationEnabled not found'))
+    await expect(submitBotchainDataset(args)).rejects.toThrow(/does not implement the expected BotChainDatasetRegistry interface/i)
+    expect(mocks.writeContract).not.toHaveBeenCalled()
+  })
+
+  it('refuses to broadcast if submitting wallet lacks permission (registration closed and not allowlisted)', async () => {
+    mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === 'publicRegistrationEnabled') return false
+      if (functionName === 'owner') return '0x0000000000000000000000000000000000000001'
+      if (functionName === 'authorizedSubmitters') return false
+      return true
+    })
+    await expect(submitBotchainDataset(args)).rejects.toThrow(/lacks permission to register datasets/i)
+    expect(mocks.writeContract).not.toHaveBeenCalled()
+  })
+
+  it('refuses to broadcast if submitting wallet has insufficient gas balance', async () => {
+    mocks.getBalance.mockResolvedValue(100n)
+    await expect(submitBotchainDataset(args)).rejects.toThrow(/Insufficient gas funds on Bohr Testnet/i)
     expect(mocks.writeContract).not.toHaveBeenCalled()
   })
 

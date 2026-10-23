@@ -289,7 +289,7 @@ async function runAdversarialSmokeTest() {
     log('[Phase 2.0] Establishing baseline registration on BOT Chain Pilot...');
     await page1.getByRole('button', { name: 'Canonicalize & Hash' }).click();
     await page1.waitForTimeout(100);
-    await page1.getByRole('button', { name: 'Register On-Chain' }).click();
+    await page1.getByRole('button', { name: /Stage Local Simulation|Submit On-Chain/ }).click();
     await page1.waitForTimeout(300);
 
     const storedHashLabel = page1.getByText('Stored Content Hash:');
@@ -302,7 +302,7 @@ async function runAdversarialSmokeTest() {
     const step1Textarea = page1.locator('textarea').first();
     const step3Textarea = page1.locator('textarea').nth(1);
     const hashBtn = page1.getByRole('button', { name: 'Canonicalize & Hash' });
-    const verifyBtn = page1.getByRole('button', { name: 'Verify Against On-Chain Hash' });
+    const verifyBtn = page1.getByRole('button', { name: /Verify Against Staged Simulation Hash|Verify Against On-Chain Hash/ });
 
     // Adversarial inputs for Step 3 (Verification input)
     const adversarialVerificationCases = [

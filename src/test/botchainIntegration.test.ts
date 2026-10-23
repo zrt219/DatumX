@@ -248,6 +248,52 @@ describe('BotChain integration and security pre-flight checks', () => {
       expect(record.submitter).toBe(validAccount)
       expect(record.exists).toBe(true)
     })
+
+    it('fails closed before writeContract if submitting wallet has insufficient gas balance', async () => {
+      setBotchainRegistryAddress(dummyContractAddress)
+
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(968)
+      vi.spyOn(botchainPublicClient, 'getBytecode').mockResolvedValue('0x6080')
+      vi.spyOn(botchainPublicClient, 'readContract').mockResolvedValue(true as never)
+      vi.spyOn(botchainPublicClient, 'getBalance').mockResolvedValue(50n) // strictly below 500_000_000_000_000n
+
+      const mockRequest = setupMockProvider('0x1111' as `0x${string}`)
+
+      await expect(
+        submitBotchainDataset({
+          account: validAccount,
+          datasetId: dummyDatasetId,
+          datasetHash: dummyDatasetHash,
+          version: '1.0.0',
+          metadataURI: 'https://datumx.io/meta.json',
+          walletChainId: 968,
+        }),
+      ).rejects.toThrow(/Insufficient gas funds on Bohr Testnet/i)
+
+      expect(mockRequest).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'eth_sendTransaction' }))
+    })
+
+    it('fails closed before writeContract if connected wallet is on incorrect chain (e.g. 1449000)', async () => {
+      setBotchainRegistryAddress(dummyContractAddress)
+
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(968)
+      vi.spyOn(botchainPublicClient, 'getBytecode').mockResolvedValue('0x6080')
+
+      const mockRequest = setupMockProvider('0x1111' as `0x${string}`)
+
+      await expect(
+        submitBotchainDataset({
+          account: validAccount,
+          datasetId: dummyDatasetId,
+          datasetHash: dummyDatasetHash,
+          version: '1.0.0',
+          metadataURI: 'https://datumx.io/meta.json',
+          walletChainId: 1449000,
+        }),
+      ).rejects.toThrow(/Incorrect network: Connected wallet is on chain ID 1449000/i)
+
+      expect(mockRequest).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'eth_sendTransaction' }))
+    })
   })
 
   describe('readBotchainDataset', () => {
