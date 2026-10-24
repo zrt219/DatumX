@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw, Code, Search, Terminal } from 'lucide-react'
 import { Panel } from '../shared/Panel'
 import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
@@ -147,7 +147,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   }>>([])
   const [isLoadingActivity, setIsLoadingActivity] = useState(false)
 
-  const loadActivityStream = async () => {
+  const loadActivityStream = useCallback(async () => {
     if (!isLiveReady) return
     setIsLoadingActivity(true)
     try {
@@ -158,13 +158,13 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     } finally {
       setIsLoadingActivity(false)
     }
-  }
+  }, [isLiveReady])
 
   useEffect(() => {
     if (isLiveReady) {
       loadActivityStream()
     }
-  }, [isLiveReady])
+  }, [isLiveReady, loadActivityStream])
 
   const handleComputeHash = async () => {
     setIsHashing(true)
