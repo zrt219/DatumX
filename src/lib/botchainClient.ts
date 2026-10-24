@@ -281,6 +281,64 @@ export async function readBotchainDataset(datasetId: `0x${string}`) {
   })
 }
 
+/**
+ * Fetches all registered dataset records from the active Bohr Testnet registry contract.
+ */
+export async function fetchAllBotchainDatasets(): Promise<Array<{
+  datasetId: `0x${string}`
+  datasetHash: `0x${string}`
+  version: string
+  metadataURI: string
+  submitter: `0x${string}`
+  timestamp: number
+  exists: boolean
+}>> {
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!address) return []
+
+  try {
+    const total = await botchainPublicClient.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'totalRecords',
+    })
+
+    const count = Number(total)
+    const records = []
+    for (let i = count - 1; i >= 0; i--) {
+      try {
+        const id = await botchainPublicClient.readContract({
+          address,
+          abi: botChainRegistryAbi,
+          functionName: 'getRecordIdAt',
+          args: [BigInt(i)],
+        })
+        const dataset = await botchainPublicClient.readContract({
+          address,
+          abi: botChainRegistryAbi,
+          functionName: 'getDataset',
+          args: [id],
+        })
+        records.push({
+          datasetId: id,
+          datasetHash: dataset.datasetHash,
+          version: dataset.version,
+          metadataURI: dataset.metadataURI,
+          submitter: dataset.submitter,
+          timestamp: Number(dataset.timestamp),
+          exists: dataset.exists,
+        })
+      } catch (err) {
+        console.warn(`Failed to read dataset at index ${i}:`, err)
+      }
+    }
+    return records
+  } catch (err) {
+    console.warn('Failed to fetch totalRecords from BotChain registry:', err)
+    return []
+  }
+}
+
 export interface SubmitBotchainDatasetParams {
   account: `0x${string}`
   datasetId: `0x${string}`

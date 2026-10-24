@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink } from 'lucide-react'
+import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw } from 'lucide-react'
 import { Panel } from '../shared/Panel'
 import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
@@ -10,6 +10,7 @@ import {
   readBotchainDataset,
   submitBotchainDataset,
   validateRegistrationPrerequisites,
+  fetchAllBotchainDatasets,
   type RegistryLiveCheckResult,
 } from '../../lib/botchainClient'
 import type { WalletState } from '../../types'
@@ -99,6 +100,36 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   }, [wallet.chainId])
 
   const isLiveReady = registryLiveResult.status === 'LIVE_VERIFIED'
+
+  const [recentRecords, setRecentRecords] = useState<Array<{
+    datasetId: `0x${string}`
+    datasetHash: `0x${string}`
+    version: string
+    metadataURI: string
+    submitter: `0x${string}`
+    timestamp: number
+    exists: boolean
+  }>>([])
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false)
+
+  const loadActivityStream = async () => {
+    if (!isLiveReady) return
+    setIsLoadingActivity(true)
+    try {
+      const records = await fetchAllBotchainDatasets()
+      setRecentRecords(records)
+    } catch (e) {
+      console.warn('Failed to load activity stream:', e)
+    } finally {
+      setIsLoadingActivity(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isLiveReady) {
+      loadActivityStream()
+    }
+  }, [isLiveReady])
 
   const handleComputeHash = async () => {
     setIsHashing(true)
@@ -205,6 +236,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         })
 
         setInfoMessage(`Transaction confirmed on Bohr Testnet! Tx: ${liveTx}`)
+        loadActivityStream()
       } else {
         // LOCAL SIMULATION — NO ON-CHAIN TRANSACTION
         // Remove all fabricated transaction hashes. Never substitute local state for on-chain proof.
@@ -665,6 +697,92 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           </div>
         </Panel>
       </div>
+
+      {/* Live Event Activity Stream Table */}
+      {isLiveReady && (
+        <Panel className="space-y-4">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="text-[#38bdf8]" size={18} />
+              <div>
+                <h3 className="font-semibold text-white">Live On-Chain Event Activity Stream</h3>
+                <p className="text-[11px] text-slate-400">
+                  Real-time dataset records anchored into Bohr Testnet contract <span className="font-mono text-slate-300">({registryLiveResult.address?.slice(0, 8)}...{registryLiveResult.address?.slice(-6)})</span>
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={loadActivityStream}
+              disabled={isLoadingActivity}
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08]"
+            >
+              <RefreshCw size={12} className={isLoadingActivity ? 'animate-spin' : ''} />
+              {isLoadingActivity ? 'Refreshing...' : 'Refresh Activity'}
+            </button>
+          </div>
+
+          {recentRecords.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              {isLoadingActivity ? 'Reading records from Bohr Testnet...' : 'No records registered on-chain yet.'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 text-[11px] font-medium text-slate-400">
+                    <th className="py-2.5 px-3">Dataset ID</th>
+                    <th className="py-2.5 px-3">Content SHA-256</th>
+                    <th className="py-2.5 px-3">Version</th>
+                    <th className="py-2.5 px-3">Submitter</th>
+                    <th className="py-2.5 px-3">Timestamp</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 font-mono">
+                  {recentRecords.map((r, i) => (
+                    <tr key={i} className="hover:bg-white/[0.02] transition">
+                      <td className="py-2.5 px-3 font-semibold text-slate-200">
+                        {r.datasetId.startsWith('0x444154554d') ? 'DATUMX-BOT-LIVE-001' : `${r.datasetId.slice(0, 10)}...${r.datasetId.slice(-6)}`}
+                      </td>
+                      <td className="py-2.5 px-3 text-[#38bdf8]">
+                        {r.datasetHash.slice(0, 10)}...{r.datasetHash.slice(-8)}
+                      </td>
+                      <td className="py-2.5 px-3 font-sans text-slate-300">{r.version}</td>
+                      <td className="py-2.5 px-3 text-slate-400">
+                        {r.submitter.slice(0, 6)}...{r.submitter.slice(-4)}
+                      </td>
+                      <td className="py-2.5 px-3 font-sans text-slate-400">
+                        {new Date(r.timestamp * 1000).toLocaleString([], { hour12: false })}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-sans">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStoredRecord({
+                              datasetId: r.datasetId,
+                              datasetHash: r.datasetHash,
+                              version: r.version,
+                              metadataURI: r.metadataURI,
+                              submitter: r.submitter,
+                              timestamp: r.timestamp,
+                              isLiveOnChain: true,
+                            })
+                            setInfoMessage(`Loaded dataset ${r.datasetId.slice(0, 10)}... into Step 2 & 3 for verification.`)
+                          }}
+                          className="rounded bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-400 hover:bg-sky-500/20"
+                        >
+                          Verify in Step 3
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
+      )}
     </div>
   )
 }
