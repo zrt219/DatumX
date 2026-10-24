@@ -13,6 +13,7 @@
     "contracts:verify-artifacts:xrpl": "powershell -ExecutionPolicy Bypass -File script/export-xrpl-verification-artifacts.ps1",
     "contracts:submit-verification:xrpl": "powershell -ExecutionPolicy Bypass -File script/submit-xrpl-explorer-verification.ps1",
     "contracts:smoke:xrpl": "powershell -ExecutionPolicy Bypass -File script/xrpl-smoke-test.ps1",
+    "smoke:botchain": "npx tsx scripts/smoke-test-botchain-pipeline.ts",
     "lint": "eslint .",
     "verify": "npm run lint && npm run test && npm run build && npm run contracts:test",
     "preview": "vite preview"

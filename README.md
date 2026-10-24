@@ -3,9 +3,30 @@
 
 > Deterministic release-governance protocol for AI-transformed industrial datasets, with canonical payload enforcement, no-branch lineage, validator consensus, and auditor-controlled finalization on XRPL EVM Testnet.
 
-![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-78A37B) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-5F7FA7) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-1f2937) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-4b5563) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-334155) ![License](https://img.shields.io/badge/License-MIT-15803d)
+![Status](https://img.shields.io/badge/Status-XRPL_Testnet_V5-78A37B) ![Network](https://img.shields.io/badge/Network-XRPL_EVM_Testnet_(1449000)-5F7FA7) ![Solidity](https://img.shields.io/badge/Solidity-0.8.24_(via_ir)-1f2937) ![Contracts](https://img.shields.io/badge/Contracts-Foundry-4b5563) ![Frontend](https://img.shields.io/badge/Frontend-Vite%2FReact-334155) ![License](https://img.shields.io/badge/License-Pending_Ownership_Review-amber) ![Pilot](https://img.shields.io/badge/Pilot-BOT_Chain_Testnet_(968)-38bdf8)
 
-## 🔴 Live Demo
+## 🌐 Branch Status: BOT Chain Registry Pilot (`feature/botchain-registry-pilot`)
+
+This branch establishes an isolated **BOT Chain Dataset Registry Pilot** (Register → Read → Verify) prepared for Friday technical review with **Leon, Roy, and Josh** from BOT Chain, while keeping the canonical **XRPL EVM Testnet (1449000)** deployment completely untouched.
+
+> 📖 **Full Technical Dossier**: For in-depth architecture, state transitions, and verification evidence, see [`BOTCHAIN_PILOT_SUMMARY.md`](BOTCHAIN_PILOT_SUMMARY.md) and [`docs/botchain/FRIDAY_HANDOFF.md`](docs/botchain/FRIDAY_HANDOFF.md).
+
+### Executive Summary of Completed Deliverables:
+- **Smart Contract & Automation**: Standalone [`BotChainDatasetRegistry.sol`](contracts/botchain/BotChainDatasetRegistry.sol) storing cryptographic proofs (`SHA-256`), versions, and metadata pointers, paired with deterministic deployment script [`DeployBotChainRegistry.s.sol`](script/DeployBotChainRegistry.s.sol) targeting Bohr Testnet (Chain ID `968`).
+- **Two-Network Frontend**: Dual-network support ([`botchainConfig.ts`](src/lib/botchainConfig.ts)) with canonical JSON serialization ([`canonicalHash.ts`](src/lib/canonicalHash.ts)) and interactive pilot console ([`BotChainPilotPanel.tsx`](src/components/botchain/BotChainPilotPanel.tsx)) wired via real viem contract client bindings ([`botchainClient.ts`](src/lib/botchainClient.ts)).
+- **Tested & Verified (100% Green)**: 47 Foundry tests (30 XRPL protocol + 17 BOT Chain registry & deployment security suite) and 50 Vitest tests passed with zero flakes, zero gas drift, and zero console errors; deployment hardening verified locally.
+- **Zero Regression**: Preserves all existing XRPL EVM Testnet V5 contracts, manifests ([`deployments/xrpl-testnet.json`](deployments/xrpl-testnet.json)), and lineage proofs (`1->2`, `3->4`, `5->6`, `7->8`).
+
+| Layer | XRPL EVM Testnet (Canonical) | BOT / Bohr Testnet (Pilot) | Status |
+| :--- | :--- | :--- | :--- |
+| **Chain ID** | `1449000` (`0x161b28`) | `968` (`0x3c8`) | ✅ Verified |
+| **RPC URL** | `https://rpc.testnet.xrplevm.org/` | `https://rpc.bohr.life` | ✅ Verified |
+| **Scope** | Industrial Lineage & Auditor Closure | Minimal Dataset Proof Registry (Register → Read → Verify) | ✅ Complete |
+| **Contracts** | `DatasetRegistry`, `ProjectRouter`, etc. | `BotChainDatasetRegistry.sol` | ✅ Tested (47 Foundry / 50 Vitest) |
+
+---
+
+## Live Demo
 
 | Surface | Link |
 | --- | --- |
@@ -367,7 +388,7 @@ vercel --prod
   - `output/doc/DatumX-Executive-Technical-Brief.docx`
   - `output/doc/DatumX-Case-Study.docx`
 
-## Noble Pains Uranium Alignment
+## Noble Plains Uranium Alignment
 
 The protocol is well suited to uranium exploration programs where digitization quality is no longer the only gating issue. In that operating environment, the real risk is not whether AI can extract signal from historical logs, but whether the transformed release that reaches technical review can still be defended. DatumX answers that risk with typed payload normalization, deterministic lineage, validator consensus, explicit thresholds, and auditor-only closure. That is a governance layer for decision-grade exploration data, not a generic blockchain wrapper around files.
 

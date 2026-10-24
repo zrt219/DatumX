@@ -1,4 +1,4 @@
-export type NavKey = 'overview' | 'datasets' | 'validation' | 'validators' | 'audit' | 'governance' | 'settings'
+export type NavKey = 'overview' | 'datasets' | 'validation' | 'validators' | 'audit' | 'governance' | 'settings' | 'botchain'
 
 export type ProjectSlug = 'shirley-central' | 'shirley-east' | 'duck-creek'
 

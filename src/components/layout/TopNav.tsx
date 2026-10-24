@@ -1,19 +1,26 @@
 import { Bell, Search } from 'lucide-react'
 import { clsx } from 'clsx'
-import type { ProjectRecord, WalletState } from '../../types'
+import type { NavKey, ProjectRecord, WalletState } from '../../types'
 import { TopRightIdentity } from './TopRightIdentity'
+import { switchToBotChainTestnet, getEthereumProvider } from '../../lib/network'
 
 function shortenAddress(address?: string) {
   return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect Wallet'
 }
 
-function getNetworkLabel(wallet: WalletState) {
+function getNetworkLabel(wallet: WalletState, activeNav?: NavKey) {
   if (!wallet.isConnected) return 'Disconnected'
+
+  if (activeNav === 'botchain') {
+    if (wallet.chainId === 968) return 'Bohr Testnet (968)'
+    return 'Wrong network (Need 968)'
+  }
+
   if (wallet.isCorrectNetwork) return 'XRPL EVM Testnet'
   return 'Wrong network'
 }
 
-function getNetworkTone(wallet: WalletState) {
+function getNetworkTone(wallet: WalletState, activeNav?: NavKey) {
   if (!wallet.isConnected) {
     return {
       shell: 'border-white/[0.05] bg-white/[0.03] text-slate-300',
@@ -21,7 +28,9 @@ function getNetworkTone(wallet: WalletState) {
     }
   }
 
-  if (wallet.isCorrectNetwork) {
+  const isMatched = activeNav === 'botchain' ? wallet.chainId === 968 : wallet.isCorrectNetwork
+
+  if (isMatched) {
     return {
       shell: 'border-sky-300/10 bg-[linear-gradient(180deg,rgba(80,120,176,0.12),rgba(255,255,255,0.025))] text-blue-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
       dot: 'bg-[#c9f4a0] shadow-[0_0_12px_rgba(201,244,160,0.42)]',
@@ -35,6 +44,7 @@ function getNetworkTone(wallet: WalletState) {
 }
 
 interface TopNavProps {
+  activeNav?: NavKey
   projects: ProjectRecord[]
   activeProjectSlug: string
   onProjectChange: (slug: ProjectRecord['slug']) => void
@@ -46,6 +56,7 @@ interface TopNavProps {
 }
 
 export function TopNav({
+  activeNav,
   projects,
   activeProjectSlug,
   onProjectChange,
@@ -55,7 +66,28 @@ export function TopNav({
   onConnectWallet,
   onEnsureNetwork,
 }: TopNavProps) {
-  const networkTone = getNetworkTone(wallet)
+  const networkTone = getNetworkTone(wallet, activeNav)
+  const isTargetNetwork = activeNav === 'botchain' ? wallet.chainId === 968 : wallet.isCorrectNetwork
+
+  const handleNetworkAction = async () => {
+    if (!wallet.isConnected) {
+      await onConnectWallet()
+      return
+    }
+
+    if (activeNav === 'botchain' && wallet.chainId !== 968) {
+      const provider = getEthereumProvider()
+      if (provider) {
+        await switchToBotChainTestnet(provider)
+      }
+      return
+    }
+
+    if (activeNav !== 'botchain' && !wallet.isCorrectNetwork) {
+      await onEnsureNetwork()
+      return
+    }
+  }
 
   return (
     <header className="grid gap-3 rounded-[22px] bg-[#0f151d]/88 px-4 py-3 backdrop-blur xl:grid-cols-[240px_minmax(360px,1fr)_auto] xl:items-start">
@@ -104,7 +136,7 @@ export function TopNav({
             <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(201,244,160,0.34),transparent)]" />
             <span className="inline-flex items-center gap-2">
               <span className={clsx('h-1.5 w-1.5 rounded-full', networkTone.dot)} />
-              <span>{getNetworkLabel(wallet)}</span>
+              <span>{getNetworkLabel(wallet, activeNav)}</span>
             </span>
           </div>
           <div className="relative overflow-hidden rounded-[10px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.018))] px-3 py-2 text-[9px] font-medium uppercase tracking-[0.24em] text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
@@ -116,7 +148,7 @@ export function TopNav({
           </div>
           <button
             type="button"
-            onClick={() => void (wallet.isConnected && !wallet.isCorrectNetwork ? onEnsureNetwork() : onConnectWallet())}
+            onClick={() => void handleNetworkAction()}
             disabled={wallet.isBusy}
             className="relative overflow-hidden rounded-[10px] border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] px-3.5 py-2 text-sm text-white transition duration-200 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.028))] disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -128,7 +160,15 @@ export function TopNav({
                   wallet.isConnected ? 'bg-[#c9f4a0] shadow-[0_0_10px_rgba(201,244,160,0.36)]' : 'bg-slate-400/80 shadow-[0_0_10px_rgba(148,163,184,0.2)]',
                 )}
               />
-              <span>{wallet.isBusy ? 'Working...' : wallet.isConnected && !wallet.isCorrectNetwork ? 'Switch to XRPL EVM Testnet' : shortenAddress(wallet.account)}</span>
+              <span>
+                {wallet.isBusy
+                  ? 'Working...'
+                  : wallet.isConnected && !isTargetNetwork
+                  ? activeNav === 'botchain'
+                    ? 'Switch to Bohr Testnet'
+                    : 'Switch to XRPL EVM Testnet'
+                  : shortenAddress(wallet.account)}
+              </span>
             </span>
           </button>
           <button
