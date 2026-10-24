@@ -44,7 +44,7 @@ export function getBotchainWalletClient() {
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
-export function isBotchainContractDeployed(): boolean {
+export function isBotchainContractConfigured(): boolean {
   const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
   if (!address) return false
   if (!isAddress(address)) return false
@@ -54,13 +54,89 @@ export function isBotchainContractDeployed(): boolean {
   return true
 }
 
+// Deprecated alias for backwards compatibility: only checks whether a non-placeholder address is configured.
+// To verify whether contract bytecode is actually deployed on Bohr Testnet, use checkBotchainRegistryLiveStatus().
+export const isBotchainContractDeployed = isBotchainContractConfigured
+
+export type RegistryDeploymentStatus =
+  | 'UNCONFIGURED'
+  | 'CHECKING'
+  | 'LIVE_VERIFIED'
+  | 'NOT_DEPLOYED'
+  | 'WRONG_CHAIN'
+  | 'RPC_ERROR'
+
+export interface RegistryLiveCheckResult {
+  status: RegistryDeploymentStatus
+  address?: `0x${string}`
+  error?: string
+}
+
+/**
+ * Actively queries Bohr Testnet (Chain ID 968) via RPC to determine whether
+ * the configured registry contract is genuinely deployed with verified bytecode.
+ * 
+ * Prevents the frontend from advertising a registry as live merely because an address has been configured.
+ */
+export async function checkBotchainRegistryLiveStatus(
+  customClient?: typeof botchainPublicClient,
+): Promise<RegistryLiveCheckResult> {
+  const client = customClient || botchainPublicClient
+  const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
+  if (!isBotchainContractConfigured() || !address) {
+    return { status: 'UNCONFIGURED' }
+  }
+
+  let rpcChainId: number
+  try {
+    rpcChainId = await client.getChainId()
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err)
+    return { status: 'RPC_ERROR', address, error: `RPC network lookup failed: ${detail}` }
+  }
+
+  if (rpcChainId !== BOTCHAIN_TESTNET.chainId) {
+    return {
+      status: 'WRONG_CHAIN',
+      address,
+      error: `Connected RPC is on chain ID ${rpcChainId}. Bohr Testnet (Chain ID ${BOTCHAIN_TESTNET.chainId}) required.`,
+    }
+  }
+
+  try {
+    const bytecode = await client.getBytecode({ address })
+    if (!bytecode || bytecode === '0x') {
+      return {
+        status: 'NOT_DEPLOYED',
+        address,
+        error: `No contract bytecode deployed at configured address ${address} on Bohr Testnet.`,
+      }
+    }
+
+    await client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'publicRegistrationEnabled',
+    })
+
+    return { status: 'LIVE_VERIFIED', address }
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err)
+    return {
+      status: 'NOT_DEPLOYED',
+      address,
+      error: `Registry interface check failed at ${address}: ${detail}`,
+    }
+  }
+}
+
 export async function ensureRegistryExists(): Promise<void> {
   const chainId = await botchainPublicClient.getChainId()
   if (chainId !== BOTCHAIN_TESTNET.chainId) {
     throw new Error('BOT Chain RPC network mismatch: Bohr Testnet (Chain ID 968) required.')
   }
   const address = BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress
-  if (!isBotchainContractDeployed() || !address) {
+  if (!isBotchainContractConfigured() || !address) {
     throw new Error('BOT Chain registry contract address not configured.')
   }
   const bytecode = await botchainPublicClient.getBytecode({ address })

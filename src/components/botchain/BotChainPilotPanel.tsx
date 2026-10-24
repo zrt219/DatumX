@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink } from 'lucide-react'
 import { Panel } from '../shared/Panel'
 import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
 import { switchToBotChainTestnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
-import { isBotchainContractDeployed, readBotchainDataset, submitBotchainDataset, validateRegistrationPrerequisites } from '../../lib/botchainClient'
+import {
+  isBotchainContractConfigured,
+  checkBotchainRegistryLiveStatus,
+  readBotchainDataset,
+  submitBotchainDataset,
+  validateRegistrationPrerequisites,
+  type RegistryLiveCheckResult,
+} from '../../lib/botchainClient'
 import type { WalletState } from '../../types'
 
 interface BotChainPilotPanelProps {
@@ -58,7 +65,40 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [verificationResult, setVerificationResult] = useState<'IDLE' | 'MATCH' | 'MISMATCH'>('IDLE')
 
   const isBohrChain = wallet.chainId === BOTCHAIN_TESTNET.chainId
-  const contractDeployed = isBotchainContractDeployed()
+  const [registryLiveResult, setRegistryLiveResult] = useState<RegistryLiveCheckResult>(
+    isBotchainContractConfigured() ? { status: 'CHECKING' } : { status: 'UNCONFIGURED' },
+  )
+
+  useEffect(() => {
+    let isMounted = true
+    if (!isBotchainContractConfigured()) {
+      setRegistryLiveResult({ status: 'UNCONFIGURED' })
+      return
+    }
+
+    setRegistryLiveResult({ status: 'CHECKING', address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress })
+    checkBotchainRegistryLiveStatus()
+      .then((res) => {
+        if (isMounted) {
+          setRegistryLiveResult(res)
+        }
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          setRegistryLiveResult({
+            status: 'RPC_ERROR',
+            address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [wallet.chainId])
+
+  const isLiveReady = registryLiveResult.status === 'LIVE_VERIFIED'
 
   const handleComputeHash = async () => {
     setIsHashing(true)
@@ -104,7 +144,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       const hash = await computeSha256Hex(canonical)
       const computedId = (await computeSha256Hex(datasetIdInput)) as `0x${string}`
 
-      if (contractDeployed) {
+      if (isLiveReady) {
         if (!isBohrChain) {
           throw new Error(
             `Connected wallet must be on Bohr Testnet (Chain ID ${BOTCHAIN_TESTNET.chainId}). Currently on chain ID ${wallet.chainId}.`,
@@ -192,9 +232,9 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       return
     }
 
-    if (!contractDeployed) {
+    if (!isLiveReady) {
       setErrorMessage(
-        'Cannot query on-chain record: BotChainDatasetRegistry is not deployed on Bohr Testnet.',
+        `Cannot query on-chain record: BotChainDatasetRegistry is not verified live on Bohr Testnet (${registryLiveResult.error || 'bytecode not deployed'}).`,
       )
       return
     }
@@ -266,9 +306,13 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               <h2 className="text-lg font-semibold tracking-wide text-white">
                 BOT CHAIN TESTNET — CHAIN ID {BOTCHAIN_TESTNET.chainId}
               </h2>
-              {contractDeployed ? (
+              {isLiveReady ? (
                 <span className="rounded-md border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-0.5 text-xs text-[#7dd3fc]">
                   LIVE ON-CHAIN READY
+                </span>
+              ) : registryLiveResult.status === 'CHECKING' ? (
+                <span className="rounded-md border border-slate-500/30 bg-slate-500/10 px-2 py-0.5 text-xs font-medium text-slate-300">
+                  VERIFYING ON-CHAIN STATUS...
                 </span>
               ) : (
                 <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
@@ -305,24 +349,32 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       {/* Deployment & Integrity Notice */}
       <div
         className={`rounded-xl border px-4 py-3 text-xs flex items-start gap-3 ${
-          contractDeployed
+          isLiveReady
             ? 'border-sky-500/20 bg-sky-950/20 text-sky-200'
             : 'border-amber-500/30 bg-amber-950/20 text-amber-200'
         }`}
       >
-        <Info size={16} className={`mt-0.5 shrink-0 ${contractDeployed ? 'text-sky-400' : 'text-amber-400'}`} />
+        <Info size={16} className={`mt-0.5 shrink-0 ${isLiveReady ? 'text-sky-400' : 'text-amber-400'}`} />
         <div className="space-y-1">
-<p className="font-medium text-white">
-            {contractDeployed
+          <p className="font-medium text-white">
+            {isLiveReady
               ? 'Testnet Registry Contract Active'
               : 'LOCAL SIMULATION — NO ON-CHAIN TRANSACTION'}
           </p>
           <p className="leading-relaxed opacity-90">
-            {contractDeployed ? (
+            {isLiveReady ? (
               <span>
-                Verified registry contract active at{' '}
-                <span className="font-mono text-[#4ade80]">{BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress}</span>. Live transactions
+                Verified registry contract active on Bohr Testnet at{' '}
+                <span className="font-mono text-[#4ade80]">{registryLiveResult.address}</span>. Live transactions
                 require connected wallet on Bohr Testnet (Chain ID 968) and test gas.
+              </span>
+            ) : registryLiveResult.status === 'NOT_DEPLOYED' ? (
+              <span>
+                Contract address configured (<span className="font-mono text-amber-300">{registryLiveResult.address}</span>), but no verified contract bytecode was found on Bohr Testnet (Chain ID 968). The console refuses to advertise an unverified contract as live and operates strictly in local simulation mode.
+              </span>
+            ) : registryLiveResult.status === 'RPC_ERROR' || registryLiveResult.status === 'WRONG_CHAIN' ? (
+              <span>
+                Bohr Testnet connection unverified: {registryLiveResult.error}. Operating strictly in local simulation mode without fabricating blockchain transaction hashes.
               </span>
             ) : (
               <span>
@@ -411,14 +463,14 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 onClick={handleRegisterRecord}
                 disabled={isSubmitting}
                 className={`flex-1 rounded-lg py-2 font-medium text-white transition ${
-                  contractDeployed
+                  isLiveReady
                     ? 'bg-[#0284c7] hover:bg-[#0369a1]'
                     : 'bg-amber-600 hover:bg-amber-700'
                 }`}
               >
                 {isSubmitting
                   ? 'Processing...'
-                  : contractDeployed
+                  : isLiveReady
                   ? 'Submit On-Chain'
                   : 'Stage Local Simulation'}
               </button>

@@ -3,7 +3,7 @@
 **Document Version**: 1.0.0  
 **Timestamp**: 2026-10-23T23:44:00Z  
 **Branch**: `feature/botchain-registry-pilot`  
-**Commit SHA**: `8768796e6cba511a5a2ab7dc8965da334e7189b1`  
+**Commit SHA**: `126ebe8a5e1d9b4117cef323e316db4b1300d773` (HEAD)  
 **Review Audience**: Leon, Roy, and Josh (BOT Chain) & DatumX Engineering Team  
 **Evaluation Standard**: Zero fabrication, fail-closed verification, strict network isolation.
 
@@ -21,14 +21,19 @@ This document records the exact technical status of the DatumX × BOT Chain Test
   - **Live Block Number Queried**: `27948190`
   - **Live Gas Price**: `20000000000` (20 Gwei)
 - **Local Smart Contract & Client Integrity**: **100% PASSING**
-  - Foundry Test Suite: `47 / 47` tests passed (`0` failed, `0` skipped).
-  - Vitest TypeScript Suite: `54 / 54` tests passed across `10` test files (`0` failed).
+    - Foundry Test Suite: `47 / 47` tests passed (`0` failed, `0` skipped).
+  - Vitest TypeScript Suite: `59 / 59` tests passed across `10` test files (`0` failed).
   - Production Build (`npm run build`): Clean compilation (`tsc -b && vite build`).
   - Linter (`npm run lint`): `0` errors, `0` warnings.
 - **Fail-Closed RPC Chain-ID Bug Fix**: **RESOLVED & VERIFIED**
   - Identified by Leon during code audit: `client.getChainId().catch(() => 0)` swallowed network lookup errors and failed to reject chain ID `0`.
   - Fixed in `src/lib/botchainClient.ts` to strictly require `rpcChainId === BOTCHAIN_TESTNET.chainId` (`968`), throwing an explicit error on timeout or any non-968 chain ID (including `0`, `1`, `677`).
   - Unit tests added in `src/test/botchainClient.test.ts` and `src/test/botchainIntegration.test.ts`.
+- **Frontend Prevention of Premature "Live" Advertising**: **RESOLVED & VERIFIED**
+  - The previous attempt naively advertised "LIVE ON-CHAIN READY" as long as `VITE_BOTCHAIN_REGISTRY_ADDRESS` was configured, even without bytecode on Bohr Testnet.
+  - Implemented `checkBotchainRegistryLiveStatus()` which actively verifies Bohr Testnet (Chain ID 968) via RPC for deployed bytecode and interface compliance before the frontend advertises live ready status.
+  - If unconfigured, unverified, or missing bytecode, the UI honestly displays "LOCAL SIMULATION — NO ON-CHAIN TRANSACTION" or "LOCAL SIMULATION — REGISTRY UNVERIFIED ON BOHR TESTNET".
+  - Regression tests added in `src/test/botchainIntegration.test.ts`.
 - **Frontend Independent Dataset Loading**: **IMPLEMENTED & VERIFIED**
   - Added on-chain dataset lookup controls to Step 2 of `src/components/botchain/BotChainPilotPanel.tsx`.
   - Enables loading and verifying any dataset registered out-of-band directly by dataset ID, removing session memory dependency.
@@ -41,15 +46,16 @@ This document records the exact technical status of the DatumX × BOT Chain Test
 
 ## 2. Phase-by-Phase Technical Audit
 
-### Phase 1: RPC Chain-ID Fail-Closed Bug Fix
-- **File**: `src/lib/botchainClient.ts` (`validateRegistrationPrerequisites`)
-- **Vulnerability Remediated**:
+### Phase 1: RPC Chain-ID Fail-Closed Bug Fix & Frontend Live Defense
+- **File**: `src/lib/botchainClient.ts` (`validateRegistrationPrerequisites`, `checkBotchainRegistryLiveStatus`)
+- **Vulnerabilities Remediated**:
+  1. Permissive RPC chain check:
   ```typescript
   // PREVIOUS (VULNERABLE):
   const rpcChainId = await client.getChainId().catch(() => 0)
   if (rpcChainId !== 0 && rpcChainId !== BOTCHAIN_TESTNET.chainId) { ... }
   ```
-- **Remediation**:
+  Remediation:
   ```typescript
   // REMEDIATED (FAIL-CLOSED):
   let rpcChainId: number
@@ -66,9 +72,10 @@ This document records the exact technical status of the DatumX × BOT Chain Test
     )
   }
   ```
+  2. Premature live advertisement: Added `checkBotchainRegistryLiveStatus()` to query RPC bytecode and contract interface before advertising "LIVE ON-CHAIN READY".
 - **Test Evidence**:
   - `src/test/botchainClient.test.ts`: Added tests verifying rejection on RPC timeout and chain ID `0`.
-  - `src/test/botchainIntegration.test.ts`: Added tests for chain IDs `0`, `677` (forbidden mainnet), `1` (Ethereum mainnet), and RPC network failure.
+  - `src/test/botchainIntegration.test.ts`: Added tests for chain IDs `0`, `677` (forbidden mainnet), `1` (Ethereum mainnet), RPC network failure, unverified bytecode, and live on-chain status checks.
 
 ### Phase 2: Comprehensive Codebase Verification
 - **ESLint**:
@@ -81,7 +88,7 @@ This document records the exact technical status of the DatumX × BOT Chain Test
 - **Vitest Suite**:
   ```bash
   $ npm test
-  # Result: 10 test files passed, 54 tests passed, 0 failed
+  # Result: 10 test files passed, 59 tests passed, 0 failed
   ✓ src/test/canonicalHash.test.ts (6 tests)
   ✓ src/test/canonicalHashStrict.test.ts (4 tests)
   ✓ src/test/botchainClient.test.ts (12 tests)
@@ -91,7 +98,7 @@ This document records the exact technical status of the DatumX × BOT Chain Test
   ✓ src/test/LineageGraph.test.tsx (1 test)
   ✓ src/test/useDrillProof.test.tsx (2 tests)
   ✓ src/test/app.test.tsx (1 test)
-  ✓ src/test/botchainIntegration.test.ts (18 tests)
+  ✓ src/test/botchainIntegration.test.ts (23 tests)
   ```
 - **Production Build**:
   ```bash
@@ -112,7 +119,7 @@ This document records the exact technical status of the DatumX × BOT Chain Test
 - **Command**: `cast chain-id --rpc-url https://rpc.bohr.life`
   - Output: `968` (Confirmed matching `BOTCHAIN_TESTNET.chainId`)
 - **Command**: `cast block-number --rpc-url https://rpc.bohr.life`
-  - Output: `27948190` (Live block sync confirmed)
+  - Output: `27948486` (Live block sync confirmed)
 - **Command**: `cast gas-price --rpc-url https://rpc.bohr.life`
   - Output: `20000000000` (20 Gwei)
 
@@ -162,7 +169,7 @@ The production XRPL EVM Testnet configuration has remained 100% untouched and is
 | Checkpoint | Target | Status | Detail / Evidence |
 |---|---|---|---|
 | Phase 1: RPC Fail-Closed Bug Fix | `src/lib/botchainClient.ts` | **PASS** | Strict try/catch and `rpcChainId === 968` enforcement; 100% unit test coverage. |
-| Phase 2: Full Codebase Audit | All suites & builds | **PASS** | 47/47 Foundry tests, 54/54 Vitest tests, 0 ESLint errors, clean build. |
+| Phase 2: Full Codebase Audit | All suites & builds | **PASS** | 47/47 Foundry tests, 59/59 Vitest tests, 0 ESLint errors, clean build. |
 | Phase 3: Bohr Testnet Preflight | `https://rpc.bohr.life` | **PASS** | Chain ID `968`, Block `27948190`, Gas `20 Gwei`. |
 | Phase 4: Deploy Contract | Bohr Testnet | **STOP (BLOCKED)** | Missing funded signing key & explicit deploy authorization. Zero mock broadcast. |
 | Phase 5: Register Dataset | Bohr Testnet | **PENDING PHASE 4** | Ready to submit once contract is deployed on Bohr Testnet. |

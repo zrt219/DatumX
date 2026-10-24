@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { TransactionReceipt } from 'viem'
 import {
   isBotchainContractDeployed,
+  isBotchainContractConfigured,
+  checkBotchainRegistryLiveStatus,
   validateRegistrationPrerequisites,
   submitBotchainDataset,
   readBotchainDataset,
@@ -27,25 +29,81 @@ describe('BotChain integration and security pre-flight checks', () => {
     setBotchainRegistryAddress(undefined)
   })
 
-  describe('isBotchainContractDeployed', () => {
+  describe('isBotchainContractConfigured & isBotchainContractDeployed', () => {
     it('returns false when contract address is undefined', () => {
       setBotchainRegistryAddress(undefined)
+      expect(isBotchainContractConfigured()).toBe(false)
       expect(isBotchainContractDeployed()).toBe(false)
     })
 
     it('returns false for placeholder address 0x1234567890123456789012345678901234567890', () => {
       setBotchainRegistryAddress('0x1234567890123456789012345678901234567890')
+      expect(isBotchainContractConfigured()).toBe(false)
       expect(isBotchainContractDeployed()).toBe(false)
     })
 
     it('returns false for zero address', () => {
       setBotchainRegistryAddress('0x0000000000000000000000000000000000000000')
+      expect(isBotchainContractConfigured()).toBe(false)
       expect(isBotchainContractDeployed()).toBe(false)
     })
 
-    it('returns true for valid deployed address', () => {
+    it('returns true for valid configured address', () => {
       setBotchainRegistryAddress(dummyContractAddress)
+      expect(isBotchainContractConfigured()).toBe(true)
       expect(isBotchainContractDeployed()).toBe(true)
+    })
+  })
+
+  describe('checkBotchainRegistryLiveStatus — prevents advertising live without on-chain proof', () => {
+    it('returns UNCONFIGURED when contract address is undefined, zero, or placeholder', async () => {
+      setBotchainRegistryAddress(undefined)
+      expect(await checkBotchainRegistryLiveStatus()).toEqual({ status: 'UNCONFIGURED' })
+
+      setBotchainRegistryAddress('0x0000000000000000000000000000000000000000')
+      expect(await checkBotchainRegistryLiveStatus()).toEqual({ status: 'UNCONFIGURED' })
+
+      setBotchainRegistryAddress('0x1234567890123456789012345678901234567890')
+      expect(await checkBotchainRegistryLiveStatus()).toEqual({ status: 'UNCONFIGURED' })
+    })
+
+    it('returns RPC_ERROR when RPC lookup fails or times out', async () => {
+      setBotchainRegistryAddress(dummyContractAddress)
+      vi.spyOn(botchainPublicClient, 'getChainId').mockRejectedValue(new Error('RPC Connection Timeout'))
+
+      const res = await checkBotchainRegistryLiveStatus()
+      expect(res.status).toBe('RPC_ERROR')
+      expect(res.error).toMatch(/RPC network lookup failed/i)
+    })
+
+    it('returns WRONG_CHAIN when RPC reports incorrect chain ID', async () => {
+      setBotchainRegistryAddress(dummyContractAddress)
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(1) // Ethereum mainnet
+
+      const res = await checkBotchainRegistryLiveStatus()
+      expect(res.status).toBe('WRONG_CHAIN')
+      expect(res.error).toMatch(/Connected RPC is on chain ID 1/i)
+    })
+
+    it('returns NOT_DEPLOYED when address is configured but bytecode is missing or 0x', async () => {
+      setBotchainRegistryAddress(dummyContractAddress)
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(BOTCHAIN_TESTNET.chainId)
+      vi.spyOn(botchainPublicClient, 'getBytecode').mockResolvedValue('0x')
+
+      const res = await checkBotchainRegistryLiveStatus()
+      expect(res.status).toBe('NOT_DEPLOYED')
+      expect(res.error).toMatch(/No contract bytecode deployed/i)
+    })
+
+    it('returns LIVE_VERIFIED only when chain ID 968, bytecode exists, and interface responds', async () => {
+      setBotchainRegistryAddress(dummyContractAddress)
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(BOTCHAIN_TESTNET.chainId)
+      vi.spyOn(botchainPublicClient, 'getBytecode').mockResolvedValue('0x608060405234801561001057600080fd5b50')
+      vi.spyOn(botchainPublicClient, 'readContract').mockResolvedValue(true)
+
+      const res = await checkBotchainRegistryLiveStatus()
+      expect(res.status).toBe('LIVE_VERIFIED')
+      expect(res.address).toBe(dummyContractAddress)
     })
   })
 
