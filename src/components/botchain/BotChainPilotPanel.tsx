@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw } from 'lucide-react'
+import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw, Code, Search, Terminal } from 'lucide-react'
 import { Panel } from '../shared/Panel'
 import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
@@ -58,6 +58,40 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [storedRecord, setStoredRecord] = useState<StoredPilotRecord | null>(null)
+  const [activeSubTab, setActiveSubTab] = useState<'workflow' | 'explorer'>('workflow')
+  const [explorerQueryId, setExplorerQueryId] = useState('')
+  const [explorerQueryResult, setExplorerQueryResult] = useState<{
+    datasetId?: `0x${string}`
+    datasetHash?: `0x${string}`
+    version?: string
+    metadataURI?: string
+    submitter?: `0x${string}`
+    timestamp?: bigint
+    exists?: boolean
+    error?: string
+  } | null>(null)
+  const [isQueryingExplorer, setIsQueryingExplorer] = useState(false)
+
+  const handleExplorerQuery = async () => {
+    if (!explorerQueryId.trim()) return
+    setIsQueryingExplorer(true)
+    setExplorerQueryResult(null)
+    try {
+      const rawId = explorerQueryId.trim()
+      let computedId: `0x${string}`
+      if (rawId.startsWith('0x') && rawId.length === 66) {
+        computedId = rawId as `0x${string}`
+      } else {
+        computedId = (await computeSha256Hex(rawId)) as `0x${string}`
+      }
+      const record = await readBotchainDataset(computedId)
+      setExplorerQueryResult({ ...record, datasetId: computedId })
+    } catch (err: unknown) {
+      setExplorerQueryResult({ error: err instanceof Error ? err.message : 'Dataset record not found' })
+    } finally {
+      setIsQueryingExplorer(false)
+    }
+  }
   const [loadDatasetIdInput, setLoadDatasetIdInput] = useState<string>('')
   const [isLoadingRecord, setIsLoadingRecord] = useState<boolean>(false)
 
@@ -441,8 +475,50 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         </div>
       )}
 
-      {/* 3-Step Pilot Flow */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Sub-Navigation Tabs: 3-Step Workflow vs Contract Explorer */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('workflow')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+              activeSubTab === 'workflow'
+                ? 'bg-[#38bdf8] text-slate-950 shadow-md shadow-sky-500/20'
+                : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+            }`}
+          >
+            <Layers size={14} />
+            3-Step Interactive Workflow
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('explorer')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+              activeSubTab === 'explorer'
+                ? 'bg-[#38bdf8] text-slate-950 shadow-md shadow-sky-500/20'
+                : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+            }`}
+          >
+            <Search size={14} />
+            In-App Bohr Contract Explorer
+          </button>
+        </div>
+
+        <a
+          href={`https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 hover:underline"
+        >
+          <span>View on scan.bohr.life</span>
+          <ExternalLink size={12} />
+        </a>
+      </div>
+
+      {activeSubTab === 'workflow' ? (
+        <>
+          {/* 3-Step Pilot Flow */}
+          <div className="grid gap-6 lg:grid-cols-3">
         {/* Step 1: Canonical Hash & Register */}
         <Panel className="space-y-4">
           <div className="flex items-center gap-2 border-b border-white/10 pb-3">
@@ -782,6 +858,210 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             </div>
           )}
         </Panel>
+      )}
+        </>
+      ) : (
+        /* In-App Bohr Contract Explorer Tab */
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Contract Overview & Stats Card */}
+            <Panel className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <Code className="text-[#38bdf8]" size={18} />
+                <h3 className="font-semibold text-white">Contract Overview</h3>
+              </div>
+              <div className="space-y-2.5 text-xs">
+                <div>
+                  <span className="text-slate-400">Contract Name:</span>
+                  <div className="font-mono font-medium text-slate-200">BotChainDatasetRegistry</div>
+                </div>
+                <div>
+                  <span className="text-slate-400">Contract Address:</span>
+                  <div className="font-mono text-[11px] text-[#4ade80] break-all">
+                    {registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-400">Network:</span>
+                  <div className="text-slate-200">Bohr Testnet (Chain ID 968)</div>
+                </div>
+                <div>
+                  <span className="text-slate-400">Total Datasets Anchored:</span>
+                  <div className="font-mono font-semibold text-sky-400">{recentRecords.length} records</div>
+                </div>
+                <div>
+                  <span className="text-slate-400">Public Registration:</span>
+                  <div className="text-emerald-400 font-medium">Enabled (Open Testnet Access)</div>
+                </div>
+                <div className="pt-2">
+                  <a
+                    href={`https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 w-full rounded-lg border border-sky-500/30 bg-sky-500/10 py-2 font-medium text-sky-300 hover:bg-sky-500/20 transition"
+                  >
+                    <span>Inspect on Bohr Explorer</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+            </Panel>
+
+            {/* Direct RPC State Query Tool */}
+            <Panel className="space-y-4 lg:col-span-2">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <Terminal className="text-[#a78bfa]" size={18} />
+                <h3 className="font-semibold text-white">Direct On-Chain State Reader</h3>
+              </div>
+              <p className="text-xs text-slate-400">
+                Call <code className="text-sky-300 font-mono">getDataset(bytes32)</code> directly against the live Bohr Testnet RPC without signing transactions.
+              </p>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter dataset ID string or 0x bytes32 hash..."
+                  value={explorerQueryId}
+                  onChange={(e) => setExplorerQueryId(e.target.value)}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-mono text-slate-200 outline-none focus:border-sky-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleExplorerQuery}
+                  disabled={isQueryingExplorer || !explorerQueryId.trim()}
+                  className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                >
+                  <Search size={14} />
+                  {isQueryingExplorer ? 'Querying...' : 'Query RPC'}
+                </button>
+              </div>
+
+              {explorerQueryResult && (
+                <div className="rounded-lg border border-white/10 bg-black/40 p-3 text-xs font-mono">
+                  {explorerQueryResult.error ? (
+                    <div className="text-red-400 flex items-center gap-1.5">
+                      <XCircle size={14} /> {explorerQueryResult.error}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 text-slate-300">
+                      <div className="text-emerald-400 font-semibold flex items-center gap-1.5 pb-1 border-b border-white/5">
+                        <CheckCircle2 size={14} /> Record Found in Bohr Testnet State
+                      </div>
+                      <div>
+                        <span className="text-slate-500">datasetId: </span>
+                        <span className="text-slate-200">{explorerQueryResult.datasetId}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">datasetHash: </span>
+                        <span className="text-[#38bdf8]">{explorerQueryResult.datasetHash}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">version: </span>
+                        <span className="text-slate-200">{explorerQueryResult.version}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">submitter: </span>
+                        <span className="text-slate-200">{explorerQueryResult.submitter}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">timestamp: </span>
+                        <span className="text-slate-200">
+                          {new Date(Number(explorerQueryResult.timestamp) * 1000).toUTCString()} ({String(explorerQueryResult.timestamp)})
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">metadataURI: </span>
+                        <a
+                          href={explorerQueryResult.metadataURI}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sky-400 hover:underline"
+                        >
+                          {explorerQueryResult.metadataURI}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Panel>
+          </div>
+
+          {/* Embedded Full Activity Ledger */}
+          <Panel className="space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Database className="text-[#4ade80]" size={18} />
+                <h3 className="font-semibold text-white">All Deployed Datasets on Bohr Testnet</h3>
+              </div>
+              <button
+                type="button"
+                onClick={loadActivityStream}
+                disabled={isLoadingActivity}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08]"
+              >
+                <RefreshCw size={12} className={isLoadingActivity ? 'animate-spin' : ''} />
+                {isLoadingActivity ? 'Refreshing...' : 'Refresh Ledger'}
+              </button>
+            </div>
+
+            {recentRecords.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">No records found.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[11px] font-sans font-medium text-slate-400">
+                      <th className="py-2.5 px-3">Dataset ID</th>
+                      <th className="py-2.5 px-3">Content SHA-256</th>
+                      <th className="py-2.5 px-3">Version</th>
+                      <th className="py-2.5 px-3">Submitter</th>
+                      <th className="py-2.5 px-3">Timestamp (UTC)</th>
+                      <th className="py-2.5 px-3 text-right font-sans">Bohr Explorer</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {recentRecords.map((r, i) => (
+                      <tr key={i} className="hover:bg-white/[0.02] transition">
+                        <td className="py-2.5 px-3 font-semibold text-slate-200">
+                          {r.datasetId.startsWith('0x444154554d') ? 'DATUMX-BOT-LIVE-001' : `${r.datasetId.slice(0, 10)}...${r.datasetId.slice(-6)}`}
+                        </td>
+                        <td className="py-2.5 px-3 text-[#38bdf8]">
+                          {r.datasetHash.slice(0, 10)}...{r.datasetHash.slice(-8)}
+                        </td>
+                        <td className="py-2.5 px-3 font-sans text-slate-300">{r.version}</td>
+                        <td className="py-2.5 px-3 text-slate-400">
+                          <a
+                            href={`https://scan.bohr.life/address/${r.submitter}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-sky-300 hover:underline"
+                          >
+                            {r.submitter.slice(0, 6)}...{r.submitter.slice(-4)}
+                          </a>
+                        </td>
+                        <td className="py-2.5 px-3 font-sans text-slate-400">
+                          {new Date(r.timestamp * 1000).toUTCString()}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-sans">
+                          <a
+                            href={`https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-2 py-1 text-[11px] text-sky-400 hover:bg-sky-500/20"
+                          >
+                            <span>scan.bohr.life</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+        </div>
       )}
     </div>
   )
