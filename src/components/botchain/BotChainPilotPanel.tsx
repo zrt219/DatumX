@@ -47,7 +47,8 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [rawJson, setRawJson] = useState(JSON.stringify(defaultPayload, null, 2))
   const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-002')
   const [versionInput, setVersionInput] = useState('1.0.0')
-  const [metadataUriInput, setMetadataUriInput] = useState('https://datumx.io/meta/bot-synth-001.json')
+  const [metadataUriInput, setMetadataUriInput] = useState('https://datumx.vercel.app/metadata/bot-synth-001.json')
+  const [lastCalculatedCandidateHash, setLastCalculatedCandidateHash] = useState<string>('')
 
   // Hash state
   const [calculatedHash, setCalculatedHash] = useState<string>('')
@@ -361,6 +362,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       const parsed = JSON.parse(verificationInput)
       const canonical = canonicalJsonStringify(parsed)
       const recomputed = await computeSha256Hex(canonical)
+      setLastCalculatedCandidateHash(recomputed)
 
       if (recomputed.toLowerCase() === storedRecord.datasetHash.toLowerCase()) {
         setVerificationResult('MATCH')
@@ -711,15 +713,36 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               Recalculates canonical SHA-256 against stored hash to verify data integrity without corruption or tampering.
             </p>
 
-            <div>
-              <label className="text-slate-400">Verify Candidate Payload (Try modifying a value to test mismatch)</label>
-              <textarea
-                rows={6}
-                value={verificationInput}
-                onChange={(e) => { setVerificationInput(e.target.value); setVerificationResult('IDLE') }}
-                className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#a78bfa]"
-              />
+            <div className="flex items-center justify-between">
+              <label className="text-slate-400">Verify Candidate Payload</label>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const parsed = JSON.parse(verificationInput)
+                    if (parsed.samples && parsed.samples[0]) {
+                      parsed.samples[0].gammaCount = 999.9
+                    } else {
+                      parsed.sensorReadings = [99.9, 99.9, 99.9]
+                    }
+                    setVerificationInput(JSON.stringify(parsed, null, 2))
+                    setVerificationResult('IDLE')
+                    setInfoMessage('Altered payload sensor reading (gammaCount: 999.9) to simulate data corruption.')
+                  } catch {
+                    setErrorMessage('Failed to alter JSON payload.')
+                  }
+                }}
+                className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300 hover:bg-amber-500/20"
+              >
+                Simulate Tampered Reading
+              </button>
             </div>
+            <textarea
+              rows={6}
+              value={verificationInput}
+              onChange={(e) => { setVerificationInput(e.target.value); setVerificationResult('IDLE') }}
+              className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#a78bfa]"
+            />
 
             <button
               type="button"
@@ -759,13 +782,23 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                     </span>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-1">
-<span className="flex items-center gap-1.5 text-sm">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="flex items-center gap-1.5 text-sm text-red-400">
                       <XCircle size={18} /> MISMATCH [PAYLOAD ALTERED]
                     </span>
                     <span className="text-[10px] font-normal text-slate-300">
-                      Recalculated hash does not match stored record
+                      Recalculated hash does not match stored on-chain record
                     </span>
+                    <div className="w-full text-left font-mono text-[10px] bg-black/40 rounded p-2 space-y-1 border border-red-500/20">
+                      <div className="truncate">
+                        <span className="text-slate-500">Stored on-chain: </span>
+                        <span className="text-emerald-400">{storedRecord?.datasetHash}</span>
+                      </div>
+                      <div className="truncate">
+                        <span className="text-slate-500">Altered payload: </span>
+                        <span className="text-red-400">{lastCalculatedCandidateHash}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

@@ -141,4 +141,9 @@ Tests       50 passed (50)
 - The frontend labels staged records separately and no longer fabricates transaction hashes (`LOCAL SIMULATION — NO ON-CHAIN TRANSACTION`).
 - GitHub Actions workflow `.github/workflows/pilot-verify.yml` runs lint, Vitest, build, Forge build and Forge tests. Treat CI as pending until GitHub reports completed results on the latest commit.
 - Check the code-reuse document before external reuse: no root LICENSE was present at audit time, despite an MIT badge and SPDX comments. Legal scope and asset permission are not conclusively established.
-- No Botchain mainnet deployment or financial commitment is authorized. Separate user approval is required for testnet broadcasting.
+- **Pilot Status Update**: **LIVE & DEPLOYED ON BOHR TESTNET (CHAIN ID 968)**.
+  - Contract Address: `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7` ([View on scan.bohr.life](https://scan.bohr.life/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)).
+  - Live Demo App: [https://datumx.vercel.app](https://datumx.vercel.app).
+  - Public Metadata Endpoints: [https://datumx.vercel.app/metadata/bot-live-001.json](https://datumx.vercel.app/metadata/bot-live-001.json) and [bot-synth-001.json](https://datumx.vercel.app/metadata/bot-synth-001.json).
+  - Contract Source Verification: Submitted via Foundry Blockscout API (GUID `ee555da23f972c5b09ead7f9d4b215e640b9e9b76adc56d1`), currently pending Blockscout v2 indexing on `scan.bohr.life`. Bytecode matches local compilation byte-for-byte.
+  - Post-Walkthrough Governance Recommendation: The contract currently has `publicRegistrationEnabled = true` to allow seamless evaluation by Leon, Roy, and Josh. For enterprise Phase 2, project owners should call `setPublicRegistration(false)` to restrict dataset anchoring strictly to authorized corporate relayers via `setAuthorizedSubmitter(address, true)`.
