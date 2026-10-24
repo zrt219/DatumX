@@ -34,20 +34,20 @@ interface StoredPilotRecord {
 export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPanelProps) {
   // Synthetic benchmark default (strictly synthetic, non-confidential)
   const defaultPayload = {
-    benchmarkId: 'BOT-SYNTH-BENCHMARK-001',
+    benchmarkId: 'BOT-SYNTH-BENCHMARK-002',
     projectName: 'Bohr Clean Energy Sensor Grid',
     samples: [
-      { depth: 10.5, gammaCount: 142.8, status: 'validated' },
-      { depth: 21.0, gammaCount: 198.4, status: 'validated' },
-      { depth: 31.5, gammaCount: 312.0, status: 'anomalous_high' },
+      { depth: 15.0, gammaCount: 165.2, status: 'validated' },
+      { depth: 30.0, gammaCount: 210.5, status: 'validated' },
+      { depth: 45.0, gammaCount: 345.8, status: 'anomalous_high' },
     ],
-    timestamp: 1792732800,
+    timestamp: 1792736400,
   }
 
   const [rawJson, setRawJson] = useState(JSON.stringify(defaultPayload, null, 2))
   const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-002')
   const [versionInput, setVersionInput] = useState('1.0.0')
-  const [metadataUriInput, setMetadataUriInput] = useState('https://datumx.vercel.app/metadata/bot-synth-001.json')
+  const [metadataUriInput, setMetadataUriInput] = useState('https://datumx.vercel.app/metadata/bot-synth-002.json')
   const [lastCalculatedCandidateHash, setLastCalculatedCandidateHash] = useState<string>('')
 
   // Hash state

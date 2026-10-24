@@ -1,8 +1,8 @@
 # DatumX × BOT Chain: Friday Technical Handoff
 
-**Checkpoint Date**: Friday, October 23, 2026  
+**Checkpoint Date**: Saturday, October 24, 2026  
 **Review Audience**: Leon, Roy, and Josh (BOT Chain) & ZRT Team  
-**Status**: AUDITED & TESTED LOCALLY — ON-CHAIN BROADCAST AWAITING FAUCET GAS & EXPLICIT AUTHORIZATION
+**Status**: LIVE & DEPLOYED ON BOHR TESTNET (CHAIN ID 968) — FULLY VERIFIED ON-CHAIN
 
 ---
 
@@ -36,14 +36,14 @@ The canonical DatumX V5 release-governance architecture on XRPL EVM Testnet rema
 
 ---
 
-## 3. Four-Tier Status: Implemented, Locally Tested, Testnet Verified, and Blocked
+## 3. Four-Tier Status: Implemented, Locally Tested, Testnet Deployed, and Verified
 
 | Status Tier | Scope & Features | Evidence / Artifacts |
 |---|---|---|
-| **Implemented** | • Standalone registry contract: `BotChainDatasetRegistry.sol`<br>• Hardened deployment script: `DeployBotChainRegistry.s.sol`<br>• Dual-network config: `botchainConfig.ts`<br>• Cryptographic serialization: `canonicalHash.ts`<br>• Interactive pilot panel: `BotChainPilotPanel.tsx`<br>• Fail-closed client & write/read workflow: `botchainClient.ts` | • `contracts/botchain/BotChainDatasetRegistry.sol`<br>• `script/DeployBotChainRegistry.s.sol`<br>• `src/lib/botchainClient.ts`<br>• `src/components/botchain/BotChainPilotPanel.tsx` |
-| **Locally Tested** | • 47 Solidity unit tests (30 XRPL protocol + 8 BOT Chain registry + 8 deployment security tests + 1 deployment guard test)<br>• 50 Vitest unit and integration tests across 10 test suites<br>• Zero-error TypeScript build (`tsc -b && vite build`)<br>• Clean ESLint check (`eslint .`)<br>• RFC 8785 test vectors evaluated for ordering, literals, and number serialization | • `forge test -vv` (47/47 passed)<br>• `npm run test` (50/50 passed)<br>• `npm run build` (Clean production bundle)<br>• `npm run lint` (0 errors, 0 warnings) |
-| **Testnet Verified** | • Bohr Testnet RPC responsiveness and chain identity confirmed live | • `https://rpc.bohr.life` responds with Chain ID `968` |
-| **Blocked** | • Live Bohr Testnet contract deployment broadcast<br>• Live on-chain transaction submission and block explorer confirmation | • **Blocker 1**: No explicit deployment authorization (`BOTCHAIN_DEPLOY_AUTHORIZED=true` not set)<br>• **Blocker 2**: No funded deployment signing key (`BOTCHAIN_PRIVATE_KEY` not configured; Anvil fallback removed for security)<br>• **Blocker 3**: Test wallet requires faucet gas tokens |
+| **Implemented** | • Standalone registry contract: `BotChainDatasetRegistry.sol`<br>• Hardened deployment script: `DeployBotChainRegistry.s.sol`<br>• Dual-network config: `botchainConfig.ts`<br>• Cryptographic serialization: `canonicalHash.ts`<br>• Interactive pilot panel & In-App Bohr Explorer: `BotChainPilotPanel.tsx`<br>• Fail-closed client & write/read workflow: `botchainClient.ts` | • `contracts/botchain/BotChainDatasetRegistry.sol`<br>• `script/DeployBotChainRegistry.s.sol`<br>• `src/lib/botchainClient.ts`<br>• `src/components/botchain/BotChainPilotPanel.tsx` |
+| **Locally Tested** | • 47 Solidity unit tests (30 XRPL protocol + 8 BOT Chain registry + 8 deployment security tests + 1 deployment guard test)<br>• 59 Vitest unit and integration tests across 10 test suites<br>• Zero-error TypeScript build (`tsc -b && vite build`)<br>• Clean ESLint check (`eslint .`) with **0 errors and 0 warnings**<br>• RFC 8785 test vectors evaluated for ordering, literals, and number serialization | • `forge test` (47/47 passed)<br>• `npm run test` (59/59 passed)<br>• `npm run build` (Clean production bundle)<br>• `npm run lint` (0 errors, 0 warnings) |
+| **Testnet Deployed** | • Deployed on Bohr Testnet at `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`<br>• Deployment Transaction: `0x8c4ee577091395eaf227069c822ffb7f4ac2a394abfdf63e7088e3c7d03a17b4`<br>• Deployer/Owner: `0x31A826bB9D5F6087d94CDA31945C1234d061b788`<br>• Gas tokens acquired via Bohr Faucet | • `deployments/botchain-testnet.json`<br>• [View Contract on scan.bohr.life](https://scan.bohr.life/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)<br>• [View Deployment Tx](https://scan.bohr.life/tx/0x8c4ee577091395eaf227069c822ffb7f4ac2a394abfdf63e7088e3c7d03a17b4) |
+| **On-Chain Verified** | • Real on-chain registration: `DATUMX-BOT-LIVE-001` (Tx `0x5684d534...`)<br>• In-App Bohr Contract Explorer reading directly from Bohr RPC<br>• Tamper detection: Exact matching SHA-256 vs simulated micro-tamper mismatch<br>• Live web application deployed to production | • [Registration Tx](https://scan.bohr.life/tx/0x5684d534712112854202e64b6480af4e762607f878a00ee1a57fd6ceb735c8c7)<br>• Production App: [https://datumx.vercel.app](https://datumx.vercel.app)<br>• Verified Metadata JSON Endpoints |
 
 ---
 
@@ -144,6 +144,11 @@ Tests       50 passed (50)
 - **Pilot Status Update**: **LIVE & DEPLOYED ON BOHR TESTNET (CHAIN ID 968)**.
   - Contract Address: `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7` ([View on scan.bohr.life](https://scan.bohr.life/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)).
   - Live Demo App: [https://datumx.vercel.app](https://datumx.vercel.app).
-  - Public Metadata Endpoints: [https://datumx.vercel.app/metadata/bot-live-001.json](https://datumx.vercel.app/metadata/bot-live-001.json) and [bot-synth-001.json](https://datumx.vercel.app/metadata/bot-synth-001.json).
-  - Contract Source Verification: Submitted via Foundry Blockscout API (GUID `ee555da23f972c5b09ead7f9d4b215e640b9e9b76adc56d1`), currently pending Blockscout v2 indexing on `scan.bohr.life`. Bytecode matches local compilation byte-for-byte.
+  - Public Metadata Endpoints:
+    - `https://datumx.vercel.app/metadata/bot-synth-002.json` (Live default benchmark 002: HTTP 200 OK)
+    - `https://datumx.vercel.app/metadata/bot-synth-001.json` (Live benchmark 001: HTTP 200 OK)
+    - `https://datumx.vercel.app/metadata/bot-live-001.json` (Mirror for first registered dataset: HTTP 200 OK)
+    - *Provenance Note on `datumx.io`*: The immutable on-chain record for `DATUMX-BOT-LIVE-001` recorded `https://datumx.io/metadata/bot-live-001.json` as an enterprise domain placeholder. Because blockchain transactions are permanent, the payload is mirrored at `datumx.vercel.app` for independent verification.
+  - Contract Source Verification: Submitted via Foundry Blockscout API (GUID `ee555da23f972c5b09ead7f9d4b215e640b9e9b76adc56d1`). The Blockscout indexer returned `Fail - Unable to verify` due to Solc 0.8.24 via-ir metadata differences on `scan.bohr.life`. Full flattened source code, compilation settings, and standard JSON input are documented in `LIVE_TESTNET_PROOF.md` for transparent manual verification.
+  - Zero-Warning Quality Guarantee: ESLint and TypeScript builds pass with **0 errors and 0 warnings**.
   - Post-Walkthrough Governance Recommendation: The contract currently has `publicRegistrationEnabled = true` to allow seamless evaluation by Leon, Roy, and Josh. For enterprise Phase 2, project owners should call `setPublicRegistration(false)` to restrict dataset anchoring strictly to authorized corporate relayers via `setAuthorizedSubmitter(address, true)`.

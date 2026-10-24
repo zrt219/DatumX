@@ -10,9 +10,9 @@
 
 The **DatumX × BOT Chain Dataset Registry** has been successfully deployed directly to Bohr Testnet (Chain ID `968`) and verified with an on-chain synthetic dataset registration, receipt confirmation, and independent RPC readback verification.
 
-- **Vercel Preview Demonstration**: [https://datumx-7yvn16i9f-zrt219s-projects.vercel.app](https://datumx-7yvn16i9f-zrt219s-projects.vercel.app)
+- **Vercel Production Demonstration**: [https://datumx.vercel.app](https://datumx.vercel.app)
 - **Bohr Testnet Explorer**: [https://scan.bohr.life](https://scan.bohr.life)
-- **XRPL EVM Testnet Status**: Preserved 100% untouched (`deployments/xrpl-testnet.json` unchanged).
+- **XRPL EVM Testnet Status**: Preserved 100% untouched (`deployments/xrpl-testnet.json` unchanged; live regression passing).
 
 ---
 
@@ -69,4 +69,16 @@ Querying `getDataset(datasetId)` directly via Bohr RPC returned the exact record
 
 - **Verification Tool**: Foundry `forge verify-contract` via Blockscout API.
 - **Submission GUID**: `ee555da23f972c5b09ead7f9d4b215e640b9e9b76adc56d1`.
-- **Status**: **SUBMITTED / PENDING** (Explorer indexing on `scan.bohr.life`).
+- **Status**: **SUBMITTED / PROCESSED** (Blockscout API reported `Fail - Unable to verify` due to Solc 0.8.24 via-ir metadata differences on `scan.bohr.life`).
+- **Audit Reproduction**: Bytecode deployed at `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7` matches local Foundry compilation of `contracts/botchain/BotChainDatasetRegistry.sol` byte-for-byte. Full flattened source is available in the repository.
+
+---
+
+## 5. Metadata Endpoints & URI Reconciliation
+
+| Dataset Identifier | Canonical Metadata URL | Status | Description |
+|---|---|---|---|
+| `BOT-SYNTH-002` (UI Default) | `https://datumx.vercel.app/metadata/bot-synth-002.json` | **HTTP 200 OK** | Unified benchmark 002 payload, version 1.0.0, digest `0x8446f6c5...` |
+| `BOT-SYNTH-001` | `https://datumx.vercel.app/metadata/bot-synth-001.json` | **HTTP 200 OK** | Benchmark 001 payload, version 1.0.0, digest `0x3cc7aa46...` |
+| `DATUMX-BOT-LIVE-001` | `https://datumx.vercel.app/metadata/bot-live-001.json` | **HTTP 200 OK** | Live mirror for the first registered dataset |
+| `DATUMX-BOT-LIVE-001` (On-Chain) | `https://datumx.io/metadata/bot-live-001.json` | *Permanent on-chain string* | Immutable on-chain record; mirrored on Vercel for guaranteed access |

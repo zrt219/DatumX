@@ -1,0 +1,19 @@
+{
+  "name": "Bohr Clean Energy Sensor Grid - Benchmark Dataset 002",
+  "description": "Deterministic public synthetic benchmark 002 for the DatumX x BOT Chain Technical Pilot demonstration.",
+  "datasetId": "BOT-SYNTH-002",
+  "version": "1.0.0",
+  "schema": "datumx-sensor-grid-v1",
+  "publisher": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+  "network": {
+    "name": "Bohr Testnet",
+    "chainId": 968,
+    "registryContract": "0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7"
+  },
+  "contentDigest": {
+    "algorithm": "SHA-256",
+    "serialization": "RFC-8785",
+    "hash": "0x8446f6c547e76332a84b56e14a14d31b08c848dfa1e021e64a03bfce4a6b484e"
+  },
+  "confidentiality": "STRICTLY_SYNTHETIC_PUBLIC_BENCHMARK"
+}
