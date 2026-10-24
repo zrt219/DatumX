@@ -49,7 +49,7 @@ export const BOTCHAIN_MAINNET_REFERENCE: NetworkConfig = {
 let activePilotRegistryAddress: `0x${string}` | undefined = (
   typeof import.meta !== 'undefined' && import.meta.env?.VITE_BOTCHAIN_REGISTRY_ADDRESS
     ? (import.meta.env.VITE_BOTCHAIN_REGISTRY_ADDRESS as `0x${string}`)
-    : undefined
+    : '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'
 )
 
 export const BOTCHAIN_PILOT_CONFIG = {
