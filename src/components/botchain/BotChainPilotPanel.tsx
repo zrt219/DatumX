@@ -50,6 +50,8 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [storedRecord, setStoredRecord] = useState<StoredPilotRecord | null>(null)
+  const [loadDatasetIdInput, setLoadDatasetIdInput] = useState<string>('')
+  const [isLoadingRecord, setIsLoadingRecord] = useState<boolean>(false)
 
   // Verification state
   const [verificationInput, setVerificationInput] = useState<string>(JSON.stringify(defaultPayload, null, 2))
@@ -176,6 +178,59 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       setErrorMessage(msg)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleFetchOnChainRecord = async () => {
+    setErrorMessage(null)
+    setInfoMessage(null)
+    setVerificationResult('IDLE')
+
+    const rawId = loadDatasetIdInput.trim()
+    if (!rawId) {
+      setErrorMessage('Please enter a dataset ID to fetch.')
+      return
+    }
+
+    if (!contractDeployed) {
+      setErrorMessage(
+        'Cannot query on-chain record: BotChainDatasetRegistry is not deployed on Bohr Testnet.',
+      )
+      return
+    }
+
+    setIsLoadingRecord(true)
+    try {
+      // Determine if ID is already 32-byte hex (0x...) or human-readable identifier
+      let computedId: `0x${string}`
+      if (rawId.startsWith('0x') && rawId.length === 66) {
+        computedId = rawId as `0x${string}`
+      } else {
+        computedId = (await computeSha256Hex(rawId)) as `0x${string}`
+      }
+
+      const onChainRecord = await readBotchainDataset(computedId)
+
+      if (!onChainRecord.datasetHash || onChainRecord.datasetHash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        throw new Error(`Dataset ID ${rawId} was not found on Bohr Testnet registry.`)
+      }
+
+      setStoredRecord({
+        datasetId: computedId,
+        datasetHash: onChainRecord.datasetHash,
+        version: onChainRecord.version,
+        metadataURI: onChainRecord.metadataURI,
+        submitter: onChainRecord.submitter,
+        timestamp: Number(onChainRecord.timestamp),
+        isLiveOnChain: true,
+      })
+
+      setInfoMessage(`Successfully loaded dataset record from Bohr Testnet for ID: ${rawId}`)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch on-chain dataset'
+      setErrorMessage(msg)
+    } finally {
+      setIsLoadingRecord(false)
     }
   }
 
@@ -386,6 +441,27 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           </div>
 
           <div className="space-y-3 text-xs">
+            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2 space-y-1.5">
+              <label className="text-[11px] text-slate-400">Load On-Chain Record by ID</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="ID (e.g. BOT-SYNTH-001 or 0x...)"
+                  value={loadDatasetIdInput}
+                  onChange={(e) => setLoadDatasetIdInput(e.target.value)}
+                  className="flex-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#4ade80]"
+                />
+                <button
+                  type="button"
+                  onClick={handleFetchOnChainRecord}
+                  disabled={isLoadingRecord}
+                  className="rounded-md bg-emerald-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                >
+                  {isLoadingRecord ? 'Fetching...' : 'Query'}
+                </button>
+              </div>
+            </div>
+
             {storedRecord ? (
               <div className="space-y-2.5">
                 <div className="rounded-lg bg-black/30 p-3 border border-white/5 space-y-1.5">
@@ -438,15 +514,15 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                   </div>
                 ) : (
                   <div className="rounded-lg bg-amber-950/30 p-2.5 border border-amber-500/20 text-[11px] text-amber-300">
-                    <span>Local simulation only. No on-chain transaction hash or block explorer record exists.</span>
+                    <span>{storedRecord.isLiveOnChain ? 'Record read independently from on-chain state.' : 'Local simulation only. No on-chain transaction hash or block explorer record exists.'}</span>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500">
+              <div className="flex flex-col items-center justify-center py-10 text-center text-slate-500">
                 <Layers size={32} className="mb-2 opacity-40" />
-                <p>No record registered yet.</p>
-                <p className="text-[11px] text-slate-600 mt-1">Submit a dataset record in Step 1 to inspect state.</p>
+                <p>No record loaded or registered yet.</p>
+                <p className="text-[11px] text-slate-600 mt-1">Submit in Step 1 or query an ID above to inspect state.</p>
               </div>
             )}
           </div>

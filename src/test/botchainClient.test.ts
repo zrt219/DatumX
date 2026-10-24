@@ -85,6 +85,18 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
     expect(mocks.writeContract).not.toHaveBeenCalled()
   })
 
+  it('refuses to broadcast if the RPC lookup fails or times out', async () => {
+    mocks.rpcChainId.mockRejectedValue(new Error('RPC request timed out'))
+    await expect(submitBotchainDataset(args)).rejects.toThrow(/RPC network lookup failed|timed out/i)
+    expect(mocks.writeContract).not.toHaveBeenCalled()
+  })
+
+  it('refuses to broadcast if the RPC returns chain ID 0', async () => {
+    mocks.rpcChainId.mockResolvedValue(0)
+    await expect(submitBotchainDataset(args)).rejects.toThrow(/chain|network/i)
+    expect(mocks.writeContract).not.toHaveBeenCalled()
+  })
+
   it('refuses to broadcast if the wallet is on the wrong chain', async () => {
     mocks.walletChainId.mockResolvedValue(1)
     await expect(submitBotchainDataset(args)).rejects.toThrow(/chain|network/i)

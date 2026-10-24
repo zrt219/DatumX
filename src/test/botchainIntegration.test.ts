@@ -64,6 +64,38 @@ describe('BotChain integration and security pre-flight checks', () => {
       ).rejects.toThrow(/Incorrect network: Connected wallet is on chain ID 1449000/)
     })
 
+    it('fails closed when RPC returns incorrect chain (e.g. 0, 1, 677)', async () => {
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(0)
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: BOTCHAIN_TESTNET.chainId,
+        }),
+      ).rejects.toThrow(/Incorrect RPC network: Connected RPC is on chain ID 0/)
+
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(677)
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: BOTCHAIN_TESTNET.chainId,
+        }),
+      ).rejects.toThrow(/Incorrect RPC network: Connected RPC is on chain ID 677/)
+
+      vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(1)
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: BOTCHAIN_TESTNET.chainId,
+        }),
+      ).rejects.toThrow(/Incorrect RPC network: Connected RPC is on chain ID 1/)
+    })
+
+    it('fails closed when RPC chain-id lookup errors or times out', async () => {
+      vi.spyOn(botchainPublicClient, 'getChainId').mockRejectedValue(new Error('Network timeout'))
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: BOTCHAIN_TESTNET.chainId,
+        }),
+      ).rejects.toThrow(/RPC network lookup failed: Unable to verify Bohr Testnet connection: Network timeout/)
+    })
+
     it('fails closed when registry address is unconfigured', async () => {
       setBotchainRegistryAddress(undefined)
       await expect(

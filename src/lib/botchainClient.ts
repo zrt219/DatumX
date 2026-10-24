@@ -97,8 +97,15 @@ export async function validateRegistrationPrerequisites(
     )
   }
 
-  const rpcChainId = await client.getChainId().catch(() => 0)
-  if (rpcChainId !== 0 && rpcChainId !== BOTCHAIN_TESTNET.chainId) {
+  let rpcChainId: number
+  try {
+    rpcChainId = await client.getChainId()
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err)
+    throw new Error(`RPC network lookup failed: Unable to verify Bohr Testnet connection: ${detail}`)
+  }
+
+  if (rpcChainId !== BOTCHAIN_TESTNET.chainId) {
     throw new Error(
       `Incorrect RPC network: Connected RPC is on chain ID ${rpcChainId}. Bohr Testnet (chain ID ${BOTCHAIN_TESTNET.chainId}) is required.`,
     )
