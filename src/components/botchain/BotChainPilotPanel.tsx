@@ -44,7 +44,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   }
 
   const [rawJson, setRawJson] = useState(JSON.stringify(defaultPayload, null, 2))
-  const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-001')
+  const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-002')
   const [versionInput, setVersionInput] = useState('1.0.0')
   const [metadataUriInput, setMetadataUriInput] = useState('https://datumx.io/meta/bot-synth-001.json')
 
@@ -159,6 +159,17 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           walletChainId: wallet.chainId,
           account: wallet.account as `0x${string}`,
         })
+
+        // Pre-flight check: prevent re-registering existing dataset ID
+        try {
+          const existing = await readBotchainDataset(computedId)
+          if (existing.exists || (existing.datasetHash && existing.datasetHash !== '0x0000000000000000000000000000000000000000000000000000000000000000')) {
+            throw new Error(`Dataset ID "${datasetIdInput}" is already registered on-chain. Please use a new unique ID (e.g. BOT-SYNTH-002, BOT-SYNTH-003) or query it in Step 2.`)
+          }
+        } catch (e: unknown) {
+          if (e instanceof Error && e.message.includes('already registered')) throw e
+          // RecordNotFound or empty is expected for new records
+        }
 
         // Live on-chain write -> receipt -> readback -> verify pipeline
         const liveTx = await submitBotchainDataset({
