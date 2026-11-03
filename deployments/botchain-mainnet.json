@@ -1,0 +1,30 @@
+{
+  "network": "botchain-mainnet",
+  "chainId": 677,
+  "rpcUrl": "https://rpc.botchain.ai",
+  "explorerUrl": "https://scan.botchain.ai",
+  "gasToken": "BOT",
+  "deploymentStatus": "AWAITING_EXPLICIT_DEPLOYMENT_AUTHORIZATION",
+  "contracts": {
+    "BotChainDatasetRegistry": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "deployTxHash": null,
+      "deployBlock": null,
+      "candidateDeployer": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "owner": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "publicRegistrationEnabled": false,
+      "authorizedSubmittersPattern": "OWNER_MANAGED_ALLOWLIST"
+    }
+  },
+  "deploymentGuards": {
+    "script": "script/DeployBotChainRegistryMainnet.s.sol",
+    "requiredChainId": 677,
+    "requiredAuthorizationFlag": "BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED=true",
+    "requiredPrivateKeyVar": "BOTCHAIN_MAINNET_PRIVATE_KEY",
+    "publicRegistrationDefault": false,
+    "allowlistedSubmittersOnly": true,
+    "isolationFromTestnet": true,
+    "isolationFromXRPL": true
+  },
+  "governanceNotice": "Mainnet deployment is strictly gated pending explicit human authorization and wallet funding. Zero live transactions have been broadcast."
+}
