@@ -9,7 +9,7 @@ import {BotChainDatasetRegistry} from "../contracts/botchain/BotChainDatasetRegi
  * @title DeployBotChainRegistryMainnet
  * @notice Isolated, high-assurance deployment script for the DatumX × BOT Chain Mainnet registry.
  * @dev Enforces strict Chain ID 677 validation, explicit human authorization flags,
- *      and public registration disabled by default (owner-controlled submitters only).
+ *      and public registration strictly disabled (owner-controlled submitters only).
  *      Contains ZERO references to testnet addresses or fallback to XRPL.
  */
 contract DeployBotChainRegistryMainnet is Script {
@@ -21,17 +21,14 @@ contract DeployBotChainRegistryMainnet is Script {
         uint256 chainId = block.chainid;
         bool isAuthorized = vm.envOr("BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED", false);
         uint256 deployerPrivateKey = vm.envOr("BOTCHAIN_MAINNET_PRIVATE_KEY", uint256(0));
-        // Strict security mandate: Public registration MUST default to false for mainnet
-        bool enablePublic = vm.envOr("BOTCHAIN_MAINNET_ENABLE_PUBLIC_REGISTRATION", false);
 
-        return deploy(chainId, isAuthorized, deployerPrivateKey, enablePublic);
+        return deploy(chainId, isAuthorized, deployerPrivateKey);
     }
 
     function deploy(
         uint256 chainId,
         bool isAuthorized,
-        uint256 deployerPrivateKey,
-        bool enablePublic
+        uint256 deployerPrivateKey
     ) public returns (address registryAddress) {
         console2.log("Evaluating Mainnet deployment for Chain ID:", chainId);
 
@@ -53,8 +50,8 @@ contract DeployBotChainRegistryMainnet is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy registry with public registration disabled by default
-        BotChainDatasetRegistry registry = new BotChainDatasetRegistry(enablePublic);
+        // Deploy registry with public registration strictly disabled for restricted pilot
+        BotChainDatasetRegistry registry = new BotChainDatasetRegistry(false);
         registryAddress = address(registry);
 
         vm.stopBroadcast();

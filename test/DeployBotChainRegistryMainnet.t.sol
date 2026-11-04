@@ -17,34 +17,34 @@ contract DeployBotChainRegistryMainnetTest is Test {
 
     function testCannotDeployToBohrTestnet() public {
         vm.expectRevert(DeployBotChainRegistryMainnet.InvalidMainnetChain.selector);
-        deployScript.deploy(968, true, dummyPrivateKey, false);
+        deployScript.deploy(968, true, dummyPrivateKey);
     }
 
     function testCannotDeployToXRPL() public {
         vm.expectRevert(DeployBotChainRegistryMainnet.InvalidMainnetChain.selector);
-        deployScript.deploy(1449000, true, dummyPrivateKey, false);
+        deployScript.deploy(1449000, true, dummyPrivateKey);
     }
 
     function testCannotDeployToAnvilOrEthereum() public {
         vm.expectRevert(DeployBotChainRegistryMainnet.InvalidMainnetChain.selector);
-        deployScript.deploy(31337, true, dummyPrivateKey, false);
+        deployScript.deploy(31337, true, dummyPrivateKey);
 
         vm.expectRevert(DeployBotChainRegistryMainnet.InvalidMainnetChain.selector);
-        deployScript.deploy(1, true, dummyPrivateKey, false);
+        deployScript.deploy(1, true, dummyPrivateKey);
     }
 
     function testCannotDeployWithoutAuthorization() public {
         vm.expectRevert(DeployBotChainRegistryMainnet.DeploymentNotAuthorized.selector);
-        deployScript.deploy(677, false, dummyPrivateKey, false);
+        deployScript.deploy(677, false, dummyPrivateKey);
     }
 
     function testCannotDeployWithoutSigningKey() public {
         vm.expectRevert(DeployBotChainRegistryMainnet.MissingDeployerKey.selector);
-        deployScript.deploy(677, true, 0, false);
+        deployScript.deploy(677, true, 0);
     }
 
-    function testDeployEnforcesPublicRegistrationDisabledByDefault() public {
-        address deployed = deployScript.deploy(677, true, dummyPrivateKey, false);
+    function testDeployStrictlyEnforcesPublicRegistrationDisabled() public {
+        address deployed = deployScript.deploy(677, true, dummyPrivateKey);
         assertTrue(deployed != address(0));
 
         BotChainDatasetRegistry registry = BotChainDatasetRegistry(deployed);
@@ -53,7 +53,7 @@ contract DeployBotChainRegistryMainnetTest is Test {
     }
 
     function testOwnerControlsSubmitterAuthorizationOnMainnet() public {
-        address deployed = deployScript.deploy(677, true, dummyPrivateKey, false);
+        address deployed = deployScript.deploy(677, true, dummyPrivateKey);
         BotChainDatasetRegistry registry = BotChainDatasetRegistry(deployed);
 
         address authorizedUser = address(0xAA11);
@@ -99,11 +99,25 @@ contract DeployBotChainRegistryMainnetTest is Test {
         vm.chainId(677);
         vm.setEnv("BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED", "true");
         vm.setEnv("BOTCHAIN_MAINNET_PRIVATE_KEY", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
-        vm.setEnv("BOTCHAIN_MAINNET_ENABLE_PUBLIC_REGISTRATION", "false");
 
         address deployed = deployScript.run();
         assertTrue(deployed != address(0));
         assertFalse(BotChainDatasetRegistry(deployed).publicRegistrationEnabled());
+    }
+
+    function testRunIgnoresAnyPublicRegistrationEnvOverride() public {
+        vm.chainId(677);
+        vm.setEnv("BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED", "true");
+        vm.setEnv("BOTCHAIN_MAINNET_PRIVATE_KEY", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+        // Adversarial attempt to enable public registration via environment variable
+        vm.setEnv("BOTCHAIN_MAINNET_ENABLE_PUBLIC_REGISTRATION", "true");
+
+        address deployed = deployScript.run();
+        assertTrue(deployed != address(0));
+        assertFalse(
+            BotChainDatasetRegistry(deployed).publicRegistrationEnabled(),
+            "Public registration must remain strictly disabled despite environment variable"
+        );
     }
 
     function testRunEntrypointFailsClosedOnTestnet() public {

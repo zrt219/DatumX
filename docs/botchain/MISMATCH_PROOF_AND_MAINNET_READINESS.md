@@ -84,13 +84,13 @@ Target Chain ID:    968
 | **Existing Script Mainnet Prohibition Preserved** | **PASS** | Original `DeployBotChainRegistry.s.sol` remains 100% untouched and retains `revert MainnetDeploymentProhibited()`. |
 | **Explicit Deployment Authorization Flag** | **PASS** | Reverts immediately with `DeploymentNotAuthorized()` unless `BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED=true`. |
 | **Zero Private Key / Credential Leakage** | **PASS** | Private keys read exclusively via `vm.envOr()`; no hardcoded Anvil keys; no private keys in logs, console outputs, or committed files. |
-| **Public Registration Disabled by Default** | **PASS** | `BotChainDatasetRegistry` instantiated with `enablePublic = false`. Only owner and explicit allowlisted submitters can register. |
+| **Public Registration Disabled by Default** | **PASS** | `BotChainDatasetRegistry` instantiated with `enablePublic = false`. Hardened in `DeployBotChainRegistryMainnet.s.sol` with zero environment variable overrides. Only owner and explicit allowlisted submitters can register. |
 | **Owner-Controlled Submitter Architecture** | **PASS** | Tested in `DeployBotChainRegistryMainnet.t.sol`: unauthorized callers revert with `Unauthorized()`; owner successfully allowlists submitters. |
 | **Proprietary Data Exclusion** | **PASS** | Zero commercial borehole or mining telemetry present; only public synthetic benchmark schemas used. |
 | **No XRPL Fallback or Address Reuse** | **PASS** | Mainnet manifest (`deployments/botchain-mainnet.json`) strictly isolated; initial address set to `0x000...000`. |
-| **Mainnet RPC Event Method Support** | **PASS** | Verified live on `https://rpc.botchain.ai`: `eth_chainId` (677), `eth_blockNumber`, and `eth_getLogs` verified functional across 100, 1,000, 5,000, and 10,000 block queries. |
+| **Mainnet RPC Event Architecture & Decoupling** | **PASS** | Official BOT Chain documentation cautions that `eth_getLogs` is restricted on public RPC `https://rpc.botchain.ai`. DatumX core anchoring and verification architecture relies exclusively on direct $O(1)$ state reads via `eth_call` (`getDataset` and `verifyDatasetHash`), making verification 100% immune to public RPC log restrictions. For downstream event indexing, WebSocket RPC (`wss://rpc.botchain.ai`) and dedicated indexers (The Graph / Goldsky) are documented. |
 | **Non-Broadcast Simulation Dry Run** | **PASS** | Foundry dry run executed cleanly: gas used `728,572`. |
-| **Mainnet Signer Funding & Balance** | **FAIL (BLOCKER)** | Candidate address `0x31A826bB9D5F6087d94CDA31945C1234d061b788` has **0.00 BOT** on Mainnet. Gas cost is ~`0.01544 BOT`. Wallet must be funded prior to deployment. |
+| **Mainnet Signer Funding & Balance** | **FAIL (BLOCKER)** | Candidate address `0x31A826bB9D5F6087d94CDA31945C1234d061b788` has **0.00 BOT** on Mainnet. Gas cost is exactly **0.01457144 BOT** (`728,572 gas × 20 gwei`, reconciling historical testnet figure of 0.01544 BOT). Wallet must be funded prior to deployment. |
 | **Formal Licensing & IP Agreement** | **PENDING** | Repository root lacks formal `LICENSE` file; internal files contain MIT headers, but ZRT proprietary governance architecture is reserved. |
 | **Explorer Source Verification Invariant** | **PENDING** | Bohr Testnet API reported `Unable to verify` due to Solc 0.8.24 via-ir / Cancun metadata incompatibility with Blockscout v5/v6. Standard JSON input / flattened verification required for `scan.botchain.ai`. |
 
@@ -106,8 +106,8 @@ Target Chain ID:    968
 - **Current Mainnet Gas Price**: `20 gwei` (`20,000,000,000` wei)
 - **Estimated Deployment Gas Units**: `728,572` gas (Simulated execution)
 - **Recommended Gas Limit**: `850,000` gas
-- **Minimum Deployment Cost**: `0.01544 BOT`
-- **Recommended Wallet Funding**: `0.10 BOT` (Covers deployment + initial authorized submitter configuration + initial synthetic benchmark registration)
+- **Exact Minimum Deployment Cost**: `0.01457144 BOT` (`728,572 gas × 20 gwei = 14,571,440 gwei`; reconciled against historical Bohr Testnet tx of `0.01544 BOT` at `771,927 gas`)
+- **Recommended Wallet Funding**: `0.05` – `0.10 BOT` (Covers deployment + initial authorized submitter configuration + initial synthetic benchmark registration)
 - **Candidate Deployment Signer**: `0x31A826bB9D5F6087d94CDA31945C1234d061b788` *(Public address only; holds 0 BOT on mainnet)*
 
 ---
@@ -137,11 +137,11 @@ Target Chain ID:    968
 >
 > 2. **Mainnet Architecture & Deployment Guardrails**:
 >    - We created an isolated deployment script (`DeployBotChainRegistryMainnet.s.sol`) with hard reverts on any chain other than `677` and explicit authorization flags.
->    - Public registration is **disabled by default**, restricting write permissions strictly to the deployer and owner-allowlisted submitters.
->    - The mainnet RPC endpoint (`https://rpc.botchain.ai`) was stress-tested for log queries up to 10,000 blocks and is fully operational.
->    - In simulation, contract deployment requires **`728,572 gas` (~`0.01544 BOT` at 20 gwei)**.
+>    - Public registration is **strictly disabled** (`enablePublic = false`) with all environment variable overrides removed, restricting write permissions exclusively to the deployer and owner-allowlisted submitters.
+>    - While official documentation cautions that `eth_getLogs` is restricted on public RPC `https://rpc.botchain.ai`, DatumX core registry verification queries on-chain state directly via `eth_call` ($O(1)$ lookup via `getDataset` and `verifyDatasetHash`), operating with 100% independence from log indexing. (WebSocket RPC and indexers are documented for external log indexing).
+>    - In simulation, contract deployment requires **`728,572 gas` (`0.01457144 BOT` at 20 gwei)**.
 >
 > 3. **Earliest Realistic Deployment Date**:
 >    - **Monday, November 9, 2026**, pending deployer wallet gas funding (`0.10 BOT`) and mutual signoff.
 >
-> The codebase passes 56/56 Foundry tests, 59/59 Vitest frontend tests, ESLint, and production builds with zero warnings. All changes are committed and isolated on `feature/botchain-registry-pilot`. We await your authorization before broadcasting any live mainnet transaction.
+> The codebase passes 57/57 Foundry tests, 59/59 Vitest frontend tests, ESLint, and production builds with zero warnings. All changes are committed and isolated on `feature/botchain-registry-pilot`. We await your authorization before broadcasting any live mainnet transaction.
