@@ -105,6 +105,16 @@ contract DeployBotChainRegistryMainnetTest is Test {
         assertFalse(BotChainDatasetRegistry(deployed).publicRegistrationEnabled());
     }
 
+    function testRunAcceptsRawHexPrivateKeyWithout0xPrefix() public {
+        vm.chainId(677);
+        vm.setEnv("BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED", "true");
+        vm.setEnv("BOTCHAIN_MAINNET_PRIVATE_KEY", "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef");
+
+        address deployed = deployScript.run();
+        assertTrue(deployed != address(0));
+        assertFalse(BotChainDatasetRegistry(deployed).publicRegistrationEnabled());
+    }
+
     function testRunIgnoresAnyPublicRegistrationEnvOverride() public {
         vm.chainId(677);
         vm.setEnv("BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED", "true");
