@@ -61,8 +61,8 @@ export function OverviewPage({
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="flex h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_10px_#38bdf8]" />
               <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-sky-400">Mainnet Ecosystem Expansion</span>
-              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
-                1 BOT Funded • Deployment Pending
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                Verified Live on Mainnet (Chain ID 677)
               </span>
             </div>
             <h2 className="text-xl font-bold tracking-tight text-white">

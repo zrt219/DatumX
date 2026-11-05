@@ -4,16 +4,20 @@
   "rpcUrl": "https://rpc.botchain.ai",
   "explorerUrl": "https://scan.botchain.ai",
   "gasToken": "BOT",
-  "deploymentStatus": "AWAITING_EXPLICIT_DEPLOYMENT_AUTHORIZATION",
+  "deploymentStatus": "DEPLOYED_LIVE",
   "contracts": {
     "BotChainDatasetRegistry": {
-      "address": "0x0000000000000000000000000000000000000000",
-      "deployTxHash": null,
-      "deployBlock": null,
-      "candidateDeployer": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "address": "0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7",
+      "deployTxHash": "0x717bcc1a6a5eab9d02e124f43332aab89cf6393d4f6f3a0314d370d16d81630b",
+      "deployBlock": 29237813,
+      "deployBlockHash": "0xcacb816e575f008208d879e49e5b98af004aa88292e19a9f210d75102610beb6",
+      "gasUsed": 770877,
+      "effectiveGasPriceGwei": 20.0,
+      "deployer": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
       "owner": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
       "publicRegistrationEnabled": false,
-      "authorizedSubmittersPattern": "OWNER_MANAGED_ALLOWLIST"
+      "authorizedSubmittersPattern": "OWNER_MANAGED_ALLOWLIST",
+      "deployedAt": "2026-11-05T22:06:56Z"
     }
   },
   "deploymentGuards": {
@@ -26,5 +30,5 @@
     "isolationFromTestnet": true,
     "isolationFromXRPL": true
   },
-  "governanceNotice": "Mainnet deployment is strictly gated pending explicit human authorization and wallet funding. Zero live transactions have been broadcast."
+  "governanceNotice": "BotChainDatasetRegistry successfully deployed to BOT Chain Mainnet (Chain ID 677) at 0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7 by 0x31A826bB9D5F6087d94CDA31945C1234d061b788 under explicit human authorization."
 }

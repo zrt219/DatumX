@@ -1,19 +1,23 @@
 # DatumX × BOT Chain: Phase 3 Mainnet Broadcast Authorization Gate
 
-**Document Version**: 1.0.0  
+**Document Version**: 2.0.0  
 **Effective Date**: November 5, 2026  
 **Audience**: DatumX Engineering Lead, ZRT Protocol Authority, Leon & BOT Chain Core  
-**Gate Status**: **ARMED & GATED — AWAITING EXPLICIT USER BROADCAST AUTHORIZATION**  
+**Gate Status**: **BROADCAST EXECUTED & CONFIRMED LIVE ON MAINNET (CHAIN ID 677)**  
 
 ---
 
-## 1. Safety Guardrail & Autonomous Protection Guarantee
+## 1. Safety Guardrail & Execution Record
 
-> [!WARNING]
-> **Strict Broadcast Constraint**:  
-> In accordance with project instructions, Antigravity and automated development pipelines are **strictly prohibited from broadcasting any transaction to BOT Chain Mainnet (Chain ID 677) without explicit, real-time written authorization from the human operator.**  
+> [!NOTE]
+> **Mainnet Deployment Complete**:  
+> In accordance with project instructions and following explicit human authorization (`"Approved to deploy to BOT Chain Mainnet"`), the `BotChainDatasetRegistry` contract was successfully broadcast and confirmed on BOT Chain Mainnet.
 >
-> All contracts, tests, client interfaces, deployment scripts, gas calculations, and verification harnesses are 100% prepared, pre-tested, and audited. The gate is armed. Broadcast execution requires manual human trigger.
+> - **Deployment Tx**: [`0x717bcc1a6a5eab9d02e124f43332aab89cf6393d4f6f3a0314d370d16d81630b`](https://scan.botchain.ai/tx/0x717bcc1a6a5eab9d02e124f43332aab89cf6393d4f6f3a0314d370d16d81630b)
+> - **Inclusion Block**: `29237813`
+> - **Contract Address**: [`0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`](https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)
+> - **Benchmark Registration Tx**: [`0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59`](https://scan.botchain.ai/tx/0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59) (Block `29237966`)
+> - **Post-Deployment Balance**: `0.97993404 BOT` (Verified)
 
 ---
 

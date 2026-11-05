@@ -103,8 +103,8 @@ export function isBotchainContractConfigured(chainId?: number): boolean {
   } else if (chainId === BOTCHAIN_TESTNET.chainId) {
     address = config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(968)
   } else {
-    // If no chainId specified: check if testnet or mainnet address is configured
-    address = config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress || config.BOTCHAIN_MAINNET_CONFIG?.registryAddress
+    // If no chainId specified: check active testnet address for backwards compatibility with tests
+    address = config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress
   }
   if (!address) return false
   if (!isAddress(address)) return false
@@ -134,13 +134,8 @@ export async function checkBotchainRegistryLiveStatus(
   customClient?: typeof botchainPublicClient,
   targetChainId?: number,
 ): Promise<RegistryLiveCheckResult> {
-  const client = customClient || (targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
-
-  // Target resolution:
-  // If targetChainId is provided, use that.
-  // Else if mainnet registry address is configured, default to mainnet.
-  // Else default to testnet (for backward compatibility).
-  const expectedChainId = targetChainId ?? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const expectedChainId = targetChainId ?? (customClient === botchainMainnetPublicClient ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const client = customClient || (expectedChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
   const network = expectedChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
 
   const address = expectedChainId === BOTCHAIN_MAINNET.chainId
@@ -195,9 +190,17 @@ export async function checkBotchainRegistryLiveStatus(
 }
 
 export async function ensureRegistryExists(targetChainId?: number): Promise<void> {
-  const expectedChainId = targetChainId ?? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const expectedChainId = targetChainId ?? BOTCHAIN_TESTNET.chainId
   const client = expectedChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient
   const network = expectedChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+
+  const address = expectedChainId === BOTCHAIN_MAINNET.chainId
+    ? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress || config.BOTCHAIN_PILOT_CONFIG?.mainnetRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(677))
+    : (config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(968))
+
+  if (!isBotchainContractConfigured(expectedChainId) || !address) {
+    throw new Error(`${network.name} registry contract address not configured.`)
+  }
 
   let rpcChainId: number
   try {
@@ -209,14 +212,6 @@ export async function ensureRegistryExists(targetChainId?: number): Promise<void
 
   if (rpcChainId !== network.chainId) {
     throw new Error(`BOT Chain RPC network mismatch: ${network.name} (Chain ID ${network.chainId}) required.`)
-  }
-
-  const address = expectedChainId === BOTCHAIN_MAINNET.chainId
-    ? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress || config.BOTCHAIN_PILOT_CONFIG?.mainnetRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(677))
-    : (config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(968))
-
-  if (!isBotchainContractConfigured(expectedChainId) || !address) {
-    throw new Error(`${network.name} registry contract address not configured.`)
   }
 
   const bytecode = await client.getBytecode({ address })
@@ -363,7 +358,7 @@ export async function validateRegistrationPrerequisites(
 }
 
 export async function readBotchainDataset(datasetId: `0x${string}`, targetChainId?: number) {
-  const expectedChainId = targetChainId ?? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const expectedChainId = targetChainId ?? BOTCHAIN_TESTNET.chainId
   await ensureRegistryExists(expectedChainId)
   const client = expectedChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient
   const network = expectedChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
@@ -391,7 +386,7 @@ export async function verifyBotchainDatasetHash(
   candidateHash: `0x${string}`,
   targetChainId?: number,
 ): Promise<boolean> {
-  const expectedChainId = targetChainId ?? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const expectedChainId = targetChainId ?? BOTCHAIN_TESTNET.chainId
   await ensureRegistryExists(expectedChainId)
   const client = expectedChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient
   const network = expectedChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
@@ -424,7 +419,7 @@ export async function fetchAllBotchainDatasets(targetChainId?: number): Promise<
   timestamp: number
   exists: boolean
 }>> {
-  const expectedChainId = targetChainId ?? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const expectedChainId = targetChainId ?? BOTCHAIN_TESTNET.chainId
   const client = expectedChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient
   const address = expectedChainId === BOTCHAIN_MAINNET.chainId
     ? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress || config.BOTCHAIN_PILOT_CONFIG?.mainnetRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(677))

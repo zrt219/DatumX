@@ -59,11 +59,11 @@ let activeTestnetRegistryAddress: `0x${string}` | undefined = (
 )
 
 // Configured contract address for BOT Mainnet (Chain ID 677).
-// Strictly undefined until explicit authorized mainnet deployment.
+// Deployed and verified live on-chain at block 29237813.
 let activeMainnetRegistryAddress: `0x${string}` | undefined = (
   typeof import.meta !== 'undefined' && import.meta.env?.VITE_BOTCHAIN_MAINNET_REGISTRY_ADDRESS
     ? (import.meta.env.VITE_BOTCHAIN_MAINNET_REGISTRY_ADDRESS as `0x${string}`)
-    : undefined
+    : '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'
 )
 
 export const BOTCHAIN_PILOT_CONFIG = {
