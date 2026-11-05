@@ -24,7 +24,7 @@ const navGroups = [
   },
   {
     label: 'Pilot Integrations',
-    items: [{ key: 'botchain', label: 'BOT Chain Pilot', icon: Cpu }],
+    items: [{ key: 'botchain', label: 'BOT Chain Mainnet', icon: Cpu }],
   },
   {
     label: 'System',
@@ -38,8 +38,8 @@ const navGroups = [
 const systemStatus = [
   {
     label: 'Network',
-    value: 'XRPL EVM (Testnet)',
-    variant: 'xrpl',
+    value: 'BOT Chain Mainnet',
+    variant: 'botchain',
   },
   {
     label: 'Wallet',

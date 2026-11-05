@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw, Code, Search, Terminal } from 'lucide-react'
 import { Panel } from '../shared/Panel'
-import { BOTCHAIN_MAINNET, BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG, BOTCHAIN_MAINNET_CONFIG } from '../../lib/botchainConfig'
+import { BOTCHAIN_MAINNET, BOTCHAIN_PILOT_CONFIG, BOTCHAIN_MAINNET_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
-import { switchToBotChainMainnet, switchToBotChainTestnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
+import { switchToBotChainMainnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
 import {
   checkBotchainRegistryLiveStatus,
   readBotchainDataset,
@@ -44,24 +44,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     timestamp: 1792736400,
   }
 
-  // Active network target state (default is BOT Chain Mainnet 677)
-  const [selectedChainId, setSelectedChainId] = useState<number>(() => {
-    if (wallet.chainId === BOTCHAIN_TESTNET.chainId) return BOTCHAIN_TESTNET.chainId
-    return BOTCHAIN_MAINNET.chainId
-  })
-
-  // Sync selectedChainId with wallet chain when wallet connects or changes to a BOT Chain
-  useEffect(() => {
-    if (wallet.chainId === BOTCHAIN_MAINNET.chainId) {
-      setSelectedChainId(BOTCHAIN_MAINNET.chainId)
-    } else if (wallet.chainId === BOTCHAIN_TESTNET.chainId) {
-      setSelectedChainId(BOTCHAIN_TESTNET.chainId)
-    }
-  }, [wallet.chainId])
-
-  const isMainnetMode = selectedChainId === BOTCHAIN_MAINNET.chainId
-  const currentNetwork = isMainnetMode ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
-  const isWalletOnSelectedChain = wallet.chainId === currentNetwork.chainId
+  // Target network is strictly BOT Chain Mainnet (Chain ID 677)
+  const selectedChainId = BOTCHAIN_MAINNET.chainId
+  const isMainnetMode = true
+  const currentNetwork = BOTCHAIN_MAINNET
+  const isWalletOnSelectedChain = wallet.chainId === BOTCHAIN_MAINNET.chainId
 
   const [rawJson, setRawJson] = useState(JSON.stringify(defaultPayload, null, 2))
   const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-002')
@@ -215,11 +202,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       return
     }
     try {
-      if (isMainnetMode) {
-        await switchToBotChainMainnet(provider)
-      } else {
-        await switchToBotChainTestnet(provider)
-      }
+      await switchToBotChainMainnet(provider)
       await onRefreshWallet()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to switch network'
@@ -433,42 +416,20 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           <div className="flex flex-wrap items-center justify-between border-b border-white/10 pb-3 gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Target Network:</span>
-              <div className="flex rounded-lg bg-black/40 p-1 border border-white/5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedChainId(BOTCHAIN_MAINNET.chainId)}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                    isMainnetMode
-                      ? 'bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/20'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${isMainnetMode ? 'bg-slate-950' : 'bg-sky-400'}`} />
-                  BOT Chain Mainnet (677)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChainId(BOTCHAIN_TESTNET.chainId)}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                    !isMainnetMode
-                      ? 'bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/20'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${!isMainnetMode ? 'bg-slate-950' : 'bg-emerald-400'}`} />
-                  Bohr Testnet (968) [Pilot Proof]
-                </button>
+              <div className="flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-500/10 px-3.5 py-1.5 text-xs font-semibold text-sky-300">
+                <span className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
+                BOT Chain Mainnet (Chain ID 677)
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <a
-                href={currentNetwork.blockExplorerUrl}
+                href="https://scan.botchain.ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 hover:underline"
               >
-                <span>{isMainnetMode ? 'scan.botchain.ai' : 'scan.bohr.life'}</span>
+                <span>scan.botchain.ai</span>
                 <ExternalLink size={12} />
               </a>
             </div>
@@ -519,7 +480,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                   onClick={handleSwitchNetwork}
                   className="rounded-xl bg-[#0284c7] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[#0369a1]"
                 >
-                  Switch to {isMainnetMode ? 'BOT Chain Mainnet (677)' : 'Bohr Testnet (968)'}
+                  Switch to BOT Chain Mainnet (677)
                 </button>
               ) : (
                 <span className="flex items-center gap-1.5 rounded-xl border border-[#22c55e]/30 bg-[#22c55e]/10 px-3 py-2 text-xs font-medium text-[#4ade80]">
@@ -561,7 +522,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               </span>
             ) : registryLiveResult.status === 'NOT_DEPLOYED' ? (
               <span>
-                Contract address configured (<span className="font-mono text-amber-300">{registryLiveResult.address}</span>), but no verified contract bytecode was found on Bohr Testnet (Chain ID 968). The console refuses to advertise an unverified contract as live and operates strictly in local simulation mode.
+                Contract address configured (<span className="font-mono text-amber-300">{registryLiveResult.address}</span>), awaiting confirmed contract deployment on BOT Chain Mainnet (Chain ID 677). Operating in high-fidelity simulation mode.
               </span>
             ) : registryLiveResult.status === 'RPC_ERROR' || registryLiveResult.status === 'WRONG_CHAIN' ? (
               <span>
@@ -1055,22 +1016,22 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 </div>
                 <div>
                   <span className="text-slate-400">Public Registration:</span>
-                  <div className={isMainnetMode ? 'text-amber-400 font-medium' : 'text-emerald-400 font-medium'}>
-                    {isMainnetMode ? 'Strictly Disabled (Owner Managed Pilot)' : 'Enabled (Open Testnet Access)'}
+                  <div className="text-amber-400 font-medium">
+                    Strictly Disabled (Owner Managed Pilot)
                   </div>
                 </div>
                 <div className="pt-2">
                   <a
                     href={
-                      isMainnetMode
-                        ? (registryLiveResult.address ? `https://scan.botchain.ai/address/${registryLiveResult.address}` : 'https://scan.botchain.ai')
-                        : `https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`
+                      registryLiveResult.address
+                        ? `https://scan.botchain.ai/address/${registryLiveResult.address}`
+                        : 'https://scan.botchain.ai'
                     }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-1.5 w-full rounded-lg border border-sky-500/30 bg-sky-500/10 py-2 font-medium text-sky-300 hover:bg-sky-500/20 transition"
                   >
-                    <span>Inspect on {isMainnetMode ? 'BOT Chain Explorer' : 'Bohr Explorer'}</span>
+                    <span>Inspect on BOT Chain Explorer</span>
                     <ExternalLink size={14} />
                   </a>
                 </div>

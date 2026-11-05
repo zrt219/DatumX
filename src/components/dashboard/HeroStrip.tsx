@@ -12,7 +12,7 @@ interface HeroStripProps {
 }
 
 function getWalletSummary(wallet: WalletState) {
-  if (wallet.isConnected && wallet.isCorrectNetwork) return 'Connected. XRPL EVM Testnet ready.'
+  if (wallet.isConnected && wallet.isCorrectNetwork) return 'Connected. Network ready.'
   if (wallet.isConnected) return 'Connected. Wrong network.'
   return 'Connect MetaMask to enable live actions.'
 }
@@ -93,7 +93,7 @@ export function HeroStrip({ project, currentDataset, workflowPosture, wallet, on
                 disabled={wallet.isBusy}
                 className="rounded-[10px] bg-amber/10 px-4 py-2 text-sm text-amber-200 transition duration-200 hover:bg-amber/15 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {wallet.isBusy ? 'Switching...' : 'Switch to XRPL EVM Testnet'}
+                {wallet.isBusy ? 'Switching...' : 'Switch Network'}
               </button>
             ) : null}
           </div>

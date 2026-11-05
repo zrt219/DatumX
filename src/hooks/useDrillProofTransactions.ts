@@ -8,9 +8,9 @@ async function loadDrillProofClient() {
 }
 
 function getWalletGuardMessage(wallet: WalletState) {
-  if (!wallet.isMetaMaskAvailable) return 'MetaMask is required for XRPL EVM Testnet transactions.'
+  if (!wallet.isMetaMaskAvailable) return 'MetaMask is required for network transactions.'
   if (!wallet.isConnected) return 'Connect MetaMask before submitting a transaction.'
-  if (!wallet.isCorrectNetwork) return 'Switch to XRPL EVM Testnet before submitting a transaction.'
+  if (!wallet.isCorrectNetwork) return 'Switch network before submitting a transaction.'
   return null
 }
 
@@ -51,7 +51,7 @@ export function useDrillProofTransactions(wallet: WalletState, onTransactionConf
       const receipt = await client.submitDatasetTransaction(draft)
       setDatasetSubmissionState({
         status: 'success',
-        message: 'Dataset transaction confirmed on XRPL EVM Testnet.',
+        message: 'Dataset transaction confirmed on XRPL EVM.',
         txHash: receipt.transactionHash,
       })
       await onTransactionConfirmed?.()
@@ -80,7 +80,7 @@ export function useDrillProofTransactions(wallet: WalletState, onTransactionConf
       const receipt = await client.submitReviewTransaction(draft)
       setReviewSubmissionState({
         status: 'success',
-        message: 'Review transaction confirmed on XRPL EVM Testnet.',
+        message: 'Review transaction confirmed on XRPL EVM.',
         txHash: receipt.transactionHash,
       })
       await onTransactionConfirmed?.()
@@ -109,7 +109,7 @@ export function useDrillProofTransactions(wallet: WalletState, onTransactionConf
       const receipt = await client.finalizeDatasetTransaction(datasetId)
       setFinalizeSubmissionState({
         status: 'success',
-        message: 'Finalize transaction confirmed on XRPL EVM Testnet.',
+        message: 'Finalize transaction confirmed on XRPL EVM.',
         txHash: receipt.transactionHash,
       })
       await onTransactionConfirmed?.()

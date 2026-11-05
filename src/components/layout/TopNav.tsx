@@ -3,7 +3,7 @@ import { clsx } from 'clsx'
 import type { NavKey, ProjectRecord, WalletState } from '../../types'
 import { TopRightIdentity } from './TopRightIdentity'
 import { switchToBotChainMainnet, getEthereumProvider } from '../../lib/network'
-import { BOTCHAIN_MAINNET, BOTCHAIN_TESTNET } from '../../lib/botchainConfig'
+import { BOTCHAIN_MAINNET } from '../../lib/botchainConfig'
 
 function shortenAddress(address?: string) {
   return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect Wallet'
@@ -12,15 +12,13 @@ function shortenAddress(address?: string) {
 function getNetworkLabel(wallet: WalletState, activeNav?: NavKey) {
   if (!wallet.isConnected) return 'Disconnected'
 
+  if (wallet.chainId === BOTCHAIN_MAINNET.chainId) return 'BOT Chain Mainnet (677)'
+
   if (activeNav === 'botchain') {
-    if (wallet.chainId === BOTCHAIN_MAINNET.chainId) return 'BOT Chain Mainnet (677)'
-    if (wallet.chainId === BOTCHAIN_TESTNET.chainId) return 'Bohr Testnet (968) [Test]'
     return 'Switch to BOT Mainnet (677)'
   }
 
-  if (wallet.chainId === BOTCHAIN_MAINNET.chainId) return 'BOT Chain Mainnet'
-  if (wallet.chainId === BOTCHAIN_TESTNET.chainId) return 'Bohr Testnet'
-  if (wallet.isCorrectNetwork) return 'XRPL EVM Testnet'
+  if (wallet.isCorrectNetwork) return 'XRPL EVM'
   return 'Wrong network'
 }
 
@@ -33,8 +31,8 @@ function getNetworkTone(wallet: WalletState, activeNav?: NavKey) {
   }
 
   const isMatched = activeNav === 'botchain'
-    ? (wallet.chainId === BOTCHAIN_MAINNET.chainId || wallet.chainId === BOTCHAIN_TESTNET.chainId)
-    : wallet.isCorrectNetwork
+    ? wallet.chainId === BOTCHAIN_MAINNET.chainId
+    : (wallet.chainId === BOTCHAIN_MAINNET.chainId || wallet.isCorrectNetwork)
 
   if (isMatched) {
     return {
@@ -74,8 +72,8 @@ export function TopNav({
 }: TopNavProps) {
   const networkTone = getNetworkTone(wallet, activeNav)
   const isTargetNetwork = activeNav === 'botchain'
-    ? (wallet.chainId === BOTCHAIN_MAINNET.chainId || wallet.chainId === BOTCHAIN_TESTNET.chainId)
-    : wallet.isCorrectNetwork
+    ? wallet.chainId === BOTCHAIN_MAINNET.chainId
+    : (wallet.chainId === BOTCHAIN_MAINNET.chainId || wallet.isCorrectNetwork)
 
   const handleNetworkAction = async () => {
     if (!wallet.isConnected) {
@@ -84,7 +82,7 @@ export function TopNav({
     }
 
     if (activeNav === 'botchain') {
-      if (wallet.chainId !== BOTCHAIN_MAINNET.chainId && wallet.chainId !== BOTCHAIN_TESTNET.chainId) {
+      if (wallet.chainId !== BOTCHAIN_MAINNET.chainId) {
         const provider = getEthereumProvider()
         if (provider) {
           await switchToBotChainMainnet(provider)
@@ -93,7 +91,7 @@ export function TopNav({
       return
     }
 
-    if (!wallet.isCorrectNetwork) {
+    if (!wallet.isCorrectNetwork && wallet.chainId !== BOTCHAIN_MAINNET.chainId) {
       await onEnsureNetwork()
       return
     }
@@ -174,9 +172,7 @@ export function TopNav({
                 {wallet.isBusy
                   ? 'Working...'
                   : wallet.isConnected && !isTargetNetwork
-                  ? activeNav === 'botchain'
-                    ? 'Switch to BOT Mainnet'
-                    : 'Switch to XRPL EVM Testnet'
+                  ? 'Switch to BOT Mainnet'
                   : shortenAddress(wallet.account)}
               </span>
             </span>
