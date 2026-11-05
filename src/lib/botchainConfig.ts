@@ -44,28 +44,19 @@ export const BOTCHAIN_MAINNET: NetworkConfig = {
   },
 }
 
+// Default production network is BOT Chain Mainnet
+export const DEFAULT_BOTCHAIN_NETWORK: NetworkConfig = BOTCHAIN_MAINNET
+
 // Backwards compatibility alias
 export const BOTCHAIN_MAINNET_REFERENCE: NetworkConfig = BOTCHAIN_MAINNET
 
 // Configured contract address for Bohr Testnet (Chain ID 968).
 // Must be a verified, network-specific address. Placeholder addresses are forbidden.
-let activePilotRegistryAddress: `0x${string}` | undefined = (
+let activeTestnetRegistryAddress: `0x${string}` | undefined = (
   typeof import.meta !== 'undefined' && import.meta.env?.VITE_BOTCHAIN_REGISTRY_ADDRESS
     ? (import.meta.env.VITE_BOTCHAIN_REGISTRY_ADDRESS as `0x${string}`)
     : '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'
 )
-
-export const BOTCHAIN_PILOT_CONFIG = {
-  testnet: BOTCHAIN_TESTNET,
-  mainnetReference: BOTCHAIN_MAINNET_REFERENCE,
-  get pilotRegistryAddress(): `0x${string}` | undefined {
-    return activePilotRegistryAddress
-  },
-}
-
-export function setBotchainRegistryAddress(address?: `0x${string}`) {
-  activePilotRegistryAddress = address
-}
 
 // Configured contract address for BOT Mainnet (Chain ID 677).
 // Strictly undefined until explicit authorized mainnet deployment.
@@ -74,6 +65,33 @@ let activeMainnetRegistryAddress: `0x${string}` | undefined = (
     ? (import.meta.env.VITE_BOTCHAIN_MAINNET_REGISTRY_ADDRESS as `0x${string}`)
     : undefined
 )
+
+export const BOTCHAIN_PILOT_CONFIG = {
+  defaultNetwork: BOTCHAIN_MAINNET,
+  mainnet: BOTCHAIN_MAINNET,
+  testnet: BOTCHAIN_TESTNET,
+  mainnetReference: BOTCHAIN_MAINNET_REFERENCE,
+  get pilotRegistryAddress(): `0x${string}` | undefined {
+    // For backwards compatibility with testnet-specific references
+    return activeTestnetRegistryAddress
+  },
+  get mainnetRegistryAddress(): `0x${string}` | undefined {
+    return activeMainnetRegistryAddress
+  },
+  getRegistryAddress(chainId: number = BOTCHAIN_MAINNET.chainId): `0x${string}` | undefined {
+    if (chainId === BOTCHAIN_MAINNET.chainId) {
+      return activeMainnetRegistryAddress
+    }
+    if (chainId === BOTCHAIN_TESTNET.chainId) {
+      return activeTestnetRegistryAddress
+    }
+    return undefined
+  },
+}
+
+export function setBotchainRegistryAddress(address?: `0x${string}`) {
+  activeTestnetRegistryAddress = address
+}
 
 export const BOTCHAIN_MAINNET_CONFIG = {
   network: BOTCHAIN_MAINNET,

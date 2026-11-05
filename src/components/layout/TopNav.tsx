@@ -2,7 +2,8 @@ import { Bell, Search } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { NavKey, ProjectRecord, WalletState } from '../../types'
 import { TopRightIdentity } from './TopRightIdentity'
-import { switchToBotChainTestnet, getEthereumProvider } from '../../lib/network'
+import { switchToBotChainMainnet, getEthereumProvider } from '../../lib/network'
+import { BOTCHAIN_MAINNET, BOTCHAIN_TESTNET } from '../../lib/botchainConfig'
 
 function shortenAddress(address?: string) {
   return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect Wallet'
@@ -12,10 +13,13 @@ function getNetworkLabel(wallet: WalletState, activeNav?: NavKey) {
   if (!wallet.isConnected) return 'Disconnected'
 
   if (activeNav === 'botchain') {
-    if (wallet.chainId === 968) return 'Bohr Testnet (968)'
-    return 'Wrong network (Need 968)'
+    if (wallet.chainId === BOTCHAIN_MAINNET.chainId) return 'BOT Chain Mainnet (677)'
+    if (wallet.chainId === BOTCHAIN_TESTNET.chainId) return 'Bohr Testnet (968) [Test]'
+    return 'Switch to BOT Mainnet (677)'
   }
 
+  if (wallet.chainId === BOTCHAIN_MAINNET.chainId) return 'BOT Chain Mainnet'
+  if (wallet.chainId === BOTCHAIN_TESTNET.chainId) return 'Bohr Testnet'
   if (wallet.isCorrectNetwork) return 'XRPL EVM Testnet'
   return 'Wrong network'
 }
@@ -28,7 +32,9 @@ function getNetworkTone(wallet: WalletState, activeNav?: NavKey) {
     }
   }
 
-  const isMatched = activeNav === 'botchain' ? wallet.chainId === 968 : wallet.isCorrectNetwork
+  const isMatched = activeNav === 'botchain'
+    ? (wallet.chainId === BOTCHAIN_MAINNET.chainId || wallet.chainId === BOTCHAIN_TESTNET.chainId)
+    : wallet.isCorrectNetwork
 
   if (isMatched) {
     return {
@@ -67,7 +73,9 @@ export function TopNav({
   onEnsureNetwork,
 }: TopNavProps) {
   const networkTone = getNetworkTone(wallet, activeNav)
-  const isTargetNetwork = activeNav === 'botchain' ? wallet.chainId === 968 : wallet.isCorrectNetwork
+  const isTargetNetwork = activeNav === 'botchain'
+    ? (wallet.chainId === BOTCHAIN_MAINNET.chainId || wallet.chainId === BOTCHAIN_TESTNET.chainId)
+    : wallet.isCorrectNetwork
 
   const handleNetworkAction = async () => {
     if (!wallet.isConnected) {
@@ -75,15 +83,17 @@ export function TopNav({
       return
     }
 
-    if (activeNav === 'botchain' && wallet.chainId !== 968) {
-      const provider = getEthereumProvider()
-      if (provider) {
-        await switchToBotChainTestnet(provider)
+    if (activeNav === 'botchain') {
+      if (wallet.chainId !== BOTCHAIN_MAINNET.chainId && wallet.chainId !== BOTCHAIN_TESTNET.chainId) {
+        const provider = getEthereumProvider()
+        if (provider) {
+          await switchToBotChainMainnet(provider)
+        }
       }
       return
     }
 
-    if (activeNav !== 'botchain' && !wallet.isCorrectNetwork) {
+    if (!wallet.isCorrectNetwork) {
       await onEnsureNetwork()
       return
     }

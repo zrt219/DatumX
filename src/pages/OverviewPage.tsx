@@ -1,3 +1,4 @@
+import { ExternalLink, ArrowRight } from 'lucide-react'
 import { AuditTimeline } from '../components/dashboard/AuditTimeline'
 import { ConsensusPanel } from '../components/dashboard/ConsensusPanel'
 import { DatasetDetailCard } from '../components/dashboard/DatasetDetailCard'
@@ -22,6 +23,7 @@ interface OverviewPageProps {
   onConnectWallet: () => Promise<void>
   onEnsureNetwork: () => Promise<void>
   getExplorerTxUrl: (txHash: string) => string
+  onNavigateToBotChain?: () => void
 }
 
 export function OverviewPage({
@@ -36,6 +38,7 @@ export function OverviewPage({
   onConnectWallet,
   onEnsureNetwork,
   getExplorerTxUrl,
+  onNavigateToBotChain,
 }: OverviewPageProps) {
   return (
     <div className="space-y-5">
@@ -47,6 +50,70 @@ export function OverviewPage({
         onConnectWallet={onConnectWallet}
         onEnsureNetwork={onEnsureNetwork}
       />
+
+      {/* DATUMX × BOT CHAIN MAINNET Banner */}
+      <section className="relative overflow-hidden rounded-[20px] border border-sky-400/20 bg-gradient-to-r from-[#0d1c2e]/90 via-[#0a1522]/90 to-[#0e2238]/90 p-5 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_10px_#38bdf8]" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-sky-400">Mainnet Ecosystem Expansion</span>
+              <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
+                1 BOT Funded • Deployment Pending
+              </span>
+            </div>
+            <h2 className="text-xl font-bold tracking-tight text-white">
+              DATUMX × BOT CHAIN MAINNET
+            </h2>
+            <p className="max-w-3xl text-sm leading-relaxed text-slate-300">
+              DatumX extends verifiable dataset registration, on-chain integrity checks, and reproducible provenance to BOT Chain Mainnet.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
+              <a
+                href="https://botchain.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium text-sky-400 hover:text-sky-300 hover:underline"
+              >
+                <span>BOT Chain Official</span>
+                <ExternalLink size={13} />
+              </a>
+              <span className="text-slate-600">•</span>
+              <a
+                href="https://scan.botchain.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium text-sky-400 hover:text-sky-300 hover:underline"
+              >
+                <span>BOT Chain Explorer</span>
+                <ExternalLink size={13} />
+              </a>
+              <span className="text-slate-600">•</span>
+              <span className="font-mono text-slate-400">
+                Network: <strong className="text-slate-200">BOT Chain Mainnet (Chain ID 677)</strong>
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="font-mono text-slate-400">
+                Wallet: <strong className="text-slate-200">0x31A8...b788</strong> (1.0 BOT Verified)
+              </span>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-3">
+            {onNavigateToBotChain ? (
+              <button
+                type="button"
+                onClick={onNavigateToBotChain}
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:from-sky-400 hover:to-blue-500 hover:shadow-sky-500/30"
+              >
+                <span>Open BOT Chain Console</span>
+                <ArrowRight size={14} />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
       <KpiStrip kpis={kpis} />
 
       <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.34fr)_minmax(340px,0.82fr)]">

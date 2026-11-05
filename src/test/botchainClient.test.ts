@@ -43,12 +43,25 @@ vi.mock('../lib/botchainConfig', () => ({
     blockExplorerUrl: 'https://scan.bohr.life',
     nativeCurrency: { name: 'Test BOT', symbol: 'BOT', decimals: 18 },
   },
+  BOTCHAIN_MAINNET: {
+    chainId: 677,
+    chainIdHex: '0x2a5',
+    name: 'BOT Chain Mainnet',
+    rpcUrl: 'https://rpc.botchain.ai',
+    blockExplorerUrl: 'https://scan.botchain.ai',
+    nativeCurrency: { name: 'BOT', symbol: 'BOT', decimals: 18 },
+  },
   BOTCHAIN_PILOT_CONFIG: {
     pilotRegistryAddress: '0x1111111111111111111111111111111111111111',
+    mainnetRegistryAddress: undefined,
+    getRegistryAddress: (id?: number) => (id === 677 ? undefined : '0x1111111111111111111111111111111111111111'),
+  },
+  BOTCHAIN_MAINNET_CONFIG: {
+    registryAddress: undefined,
   },
 }))
 
-import { readBotchainDataset, submitBotchainDataset } from '../lib/botchainClient'
+import { readBotchainDataset, submitBotchainDataset, validateRegistrationPrerequisites } from '../lib/botchainClient'
 
 const ACCOUNT = '0x2222222222222222222222222222222222222222' as Hex
 const TX = ('0x' + '3'.repeat(64)) as Hex
@@ -81,7 +94,7 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
 
   it('refuses to broadcast if the RPC responds with the wrong chain', async () => {
     mocks.rpcChainId.mockResolvedValue(677)
-    await expect(submitBotchainDataset(args)).rejects.toThrow(/chain|network/i)
+    await expect(submitBotchainDataset({ ...args, walletChainId: 968 })).rejects.toThrow(/chain|network/i)
     expect(mocks.writeContract).not.toHaveBeenCalled()
   })
 
@@ -145,7 +158,31 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
 
   it('does not read from an unverified chain or missing contract', async () => {
     mocks.getBytecode.mockResolvedValue(undefined)
-    await expect(readBotchainDataset(args.datasetId)).rejects.toThrow(/contract|code/i)
+    await expect(readBotchainDataset(args.datasetId, 968)).rejects.toThrow(/contract|code/i)
     expect(mocks.readContract).not.toHaveBeenCalled()
+  })
+
+  // Regression tests for Chains 677, 968, and 1449000
+  describe('multi-chain regression guards (677, 968, 1449000)', () => {
+    it('strictly rejects XRPL EVM (1449000) when validating BOT Chain prerequisites', async () => {
+      mocks.walletChainId.mockResolvedValue(1449000)
+      await expect(
+        validateRegistrationPrerequisites({ walletChainId: 1449000, targetChainId: 677 })
+      ).rejects.toThrow(/Incorrect network: Connected wallet is on chain ID 1449000/i)
+    })
+
+    it('fails closed when BOT Chain Mainnet registry is unconfigured', async () => {
+      mocks.rpcChainId.mockResolvedValue(677)
+      await expect(
+        validateRegistrationPrerequisites({ walletChainId: 677, targetChainId: 677 })
+      ).rejects.toThrow(/No verified BOT Chain Mainnet registry contract address configured/i)
+    })
+
+    it('rejects wrong wallet chain on Mainnet target (e.g. wallet on 968 while targeting 677)', async () => {
+      mocks.rpcChainId.mockResolvedValue(677)
+      await expect(
+        validateRegistrationPrerequisites({ walletChainId: 968, targetChainId: 677 })
+      ).rejects.toThrow(/Connected wallet is on chain ID 968.*BOT Chain Mainnet.*required/i)
+    })
   })
 })

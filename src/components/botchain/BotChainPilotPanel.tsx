@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw, Code, Search, Terminal } from 'lucide-react'
 import { Panel } from '../shared/Panel'
-import { BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG } from '../../lib/botchainConfig'
+import { BOTCHAIN_MAINNET, BOTCHAIN_TESTNET, BOTCHAIN_PILOT_CONFIG, BOTCHAIN_MAINNET_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
-import { switchToBotChainTestnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
+import { switchToBotChainMainnet, switchToBotChainTestnet, getEthereumProvider, getExplorerTxUrl } from '../../lib/network'
 import {
-  isBotchainContractConfigured,
   checkBotchainRegistryLiveStatus,
   readBotchainDataset,
   submitBotchainDataset,
@@ -43,6 +42,25 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     ],
     timestamp: 1792736400,
   }
+
+  // Active network target state (default is BOT Chain Mainnet 677)
+  const [selectedChainId, setSelectedChainId] = useState<number>(() => {
+    if (wallet.chainId === BOTCHAIN_TESTNET.chainId) return BOTCHAIN_TESTNET.chainId
+    return BOTCHAIN_MAINNET.chainId
+  })
+
+  // Sync selectedChainId with wallet chain when wallet connects or changes to a BOT Chain
+  useEffect(() => {
+    if (wallet.chainId === BOTCHAIN_MAINNET.chainId) {
+      setSelectedChainId(BOTCHAIN_MAINNET.chainId)
+    } else if (wallet.chainId === BOTCHAIN_TESTNET.chainId) {
+      setSelectedChainId(BOTCHAIN_TESTNET.chainId)
+    }
+  }, [wallet.chainId])
+
+  const isMainnetMode = selectedChainId === BOTCHAIN_MAINNET.chainId
+  const currentNetwork = isMainnetMode ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+  const isWalletOnSelectedChain = wallet.chainId === currentNetwork.chainId
 
   const [rawJson, setRawJson] = useState(JSON.stringify(defaultPayload, null, 2))
   const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-002')
@@ -85,7 +103,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       } else {
         computedId = (await computeSha256Hex(rawId)) as `0x${string}`
       }
-      const record = await readBotchainDataset(computedId)
+      const record = await readBotchainDataset(computedId, selectedChainId)
       setExplorerQueryResult({ ...record, datasetId: computedId })
     } catch (err: unknown) {
       setExplorerQueryResult({ error: err instanceof Error ? err.message : 'Dataset record not found' })
@@ -93,6 +111,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       setIsQueryingExplorer(false)
     }
   }
+
   const [loadDatasetIdInput, setLoadDatasetIdInput] = useState<string>('')
   const [isLoadingRecord, setIsLoadingRecord] = useState<boolean>(false)
 
@@ -100,20 +119,23 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [verificationInput, setVerificationInput] = useState<string>(JSON.stringify(defaultPayload, null, 2))
   const [verificationResult, setVerificationResult] = useState<'IDLE' | 'MATCH' | 'MISMATCH'>('IDLE')
 
-  const isBohrChain = wallet.chainId === BOTCHAIN_TESTNET.chainId
+  const configuredAddress = isMainnetMode
+    ? (BOTCHAIN_MAINNET_CONFIG.registryAddress || BOTCHAIN_PILOT_CONFIG.mainnetRegistryAddress)
+    : (BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress)
+
   const [registryLiveResult, setRegistryLiveResult] = useState<RegistryLiveCheckResult>(
-    isBotchainContractConfigured() ? { status: 'CHECKING' } : { status: 'UNCONFIGURED' },
+    configuredAddress ? { status: 'CHECKING', address: configuredAddress } : { status: 'UNCONFIGURED' },
   )
 
   useEffect(() => {
     let isMounted = true
-    if (!isBotchainContractConfigured()) {
+    if (!configuredAddress) {
       setRegistryLiveResult({ status: 'UNCONFIGURED' })
       return
     }
 
-    setRegistryLiveResult({ status: 'CHECKING', address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress })
-    checkBotchainRegistryLiveStatus()
+    setRegistryLiveResult({ status: 'CHECKING', address: configuredAddress })
+    checkBotchainRegistryLiveStatus(undefined, selectedChainId)
       .then((res) => {
         if (isMounted) {
           setRegistryLiveResult(res)
@@ -123,7 +145,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         if (isMounted) {
           setRegistryLiveResult({
             status: 'RPC_ERROR',
-            address: BOTCHAIN_PILOT_CONFIG.pilotRegistryAddress,
+            address: configuredAddress,
             error: err instanceof Error ? err.message : String(err),
           })
         }
@@ -132,7 +154,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     return () => {
       isMounted = false
     }
-  }, [wallet.chainId])
+  }, [selectedChainId, configuredAddress, wallet.chainId])
 
   const isLiveReady = registryLiveResult.status === 'LIVE_VERIFIED'
 
@@ -151,18 +173,20 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     if (!isLiveReady) return
     setIsLoadingActivity(true)
     try {
-      const records = await fetchAllBotchainDatasets()
+      const records = await fetchAllBotchainDatasets(selectedChainId)
       setRecentRecords(records)
     } catch (e) {
       console.warn('Failed to load activity stream:', e)
     } finally {
       setIsLoadingActivity(false)
     }
-  }, [isLiveReady])
+  }, [isLiveReady, selectedChainId])
 
   useEffect(() => {
     if (isLiveReady) {
       loadActivityStream()
+    } else {
+      setRecentRecords([])
     }
   }, [isLiveReady, loadActivityStream])
 
@@ -182,14 +206,18 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     }
   }
 
-  const handleSwitchToBotChain = async () => {
+  const handleSwitchNetwork = async () => {
     const provider = getEthereumProvider()
     if (!provider) {
       setErrorMessage('No Ethereum browser wallet detected.')
       return
     }
     try {
-      await switchToBotChainTestnet(provider)
+      if (isMainnetMode) {
+        await switchToBotChainMainnet(provider)
+      } else {
+        await switchToBotChainTestnet(provider)
+      }
       await onRefreshWallet()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to switch network'
@@ -211,30 +239,30 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       const computedId = (await computeSha256Hex(datasetIdInput)) as `0x${string}`
 
       if (isLiveReady) {
-        if (!isBohrChain) {
+        if (!isWalletOnSelectedChain) {
           throw new Error(
-            `Connected wallet must be on Bohr Testnet (Chain ID ${BOTCHAIN_TESTNET.chainId}). Currently on chain ID ${wallet.chainId}.`,
+            `Connected wallet must be on ${currentNetwork.name} (Chain ID ${currentNetwork.chainId}). Currently on chain ID ${wallet.chainId}.`,
           )
         }
         if (!wallet.account) {
-          throw new Error('Please connect an authorized wallet on Bohr Testnet before submitting.')
+          throw new Error(`Please connect an authorized wallet on ${currentNetwork.name} before submitting.`)
         }
 
         // Validate all 5 prerequisites fail-closed before live submission
         await validateRegistrationPrerequisites({
           walletChainId: wallet.chainId,
           account: wallet.account as `0x${string}`,
+          targetChainId: selectedChainId,
         })
 
         // Pre-flight check: prevent re-registering existing dataset ID
         try {
-          const existing = await readBotchainDataset(computedId)
+          const existing = await readBotchainDataset(computedId, selectedChainId)
           if (existing.exists || (existing.datasetHash && existing.datasetHash !== '0x0000000000000000000000000000000000000000000000000000000000000000')) {
-            throw new Error(`Dataset ID "${datasetIdInput}" is already registered on-chain. Please use a new unique ID (e.g. BOT-SYNTH-002, BOT-SYNTH-003) or query it in Step 2.`)
+            throw new Error(`Dataset ID "${datasetIdInput}" is already registered on-chain. Please use a new unique ID or query it in Step 2.`)
           }
         } catch (e: unknown) {
           if (e instanceof Error && e.message.includes('already registered')) throw e
-          // RecordNotFound or empty is expected for new records
         }
 
         // Live on-chain write -> receipt -> readback -> verify pipeline
@@ -245,10 +273,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           version: versionInput,
           metadataURI: metadataUriInput,
           walletChainId: wallet.chainId,
+          targetChainId: selectedChainId,
         })
 
         // Read back confirmed record from chain
-        const onChainRecord = await readBotchainDataset(computedId)
+        const onChainRecord = await readBotchainDataset(computedId, selectedChainId)
 
         // Verify input hash matches on-chain hash
         if (onChainRecord.datasetHash.toLowerCase() !== hash.toLowerCase()) {
@@ -257,7 +286,6 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           )
         }
 
-        // Never substitute local React state for blockchain readback:
         // Populate directly from the independently read on-chain record
         setStoredRecord({
           datasetId: computedId,
@@ -270,11 +298,10 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           txHash: liveTx,
         })
 
-        setInfoMessage(`Transaction confirmed on Bohr Testnet! Tx: ${liveTx}`)
+        setInfoMessage(`Transaction confirmed on ${currentNetwork.name}! Tx: ${liveTx}`)
         loadActivityStream()
       } else {
         // LOCAL SIMULATION — NO ON-CHAIN TRANSACTION
-        // Remove all fabricated transaction hashes. Never substitute local state for on-chain proof.
         const stagedRecord: StoredPilotRecord = {
           datasetId: computedId,
           datasetHash: hash,
@@ -287,9 +314,15 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         }
 
         setStoredRecord(stagedRecord)
-        setInfoMessage(
-          'LOCAL SIMULATION ONLY — Record staged in memory. No on-chain transaction was broadcast because BotChainDatasetRegistry is not yet deployed on Bohr Testnet.',
-        )
+        if (isMainnetMode) {
+          setInfoMessage(
+            'MAINNET BROADCAST GATE: BotChainDatasetRegistry has not yet been broadcast to BOT Chain Mainnet. Deployment wallet 0x31A826bB9D5F6087d94CDA31945C1234d061b788 is funded with 1.0 BOT. Awaiting explicit user broadcast authorization before transmitting live transactions.',
+          )
+        } else {
+          setInfoMessage(
+            'LOCAL SIMULATION ONLY — Record staged in memory. No on-chain transaction was broadcast because BotChainDatasetRegistry is not yet deployed on Bohr Testnet.',
+          )
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed'
@@ -312,14 +345,13 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
 
     if (!isLiveReady) {
       setErrorMessage(
-        `Cannot query on-chain record: BotChainDatasetRegistry is not verified live on Bohr Testnet (${registryLiveResult.error || 'bytecode not deployed'}).`,
+        `Cannot query on-chain record: BotChainDatasetRegistry is not verified live on ${currentNetwork.name} (${registryLiveResult.error || 'bytecode not deployed'}).`,
       )
       return
     }
 
     setIsLoadingRecord(true)
     try {
-      // Determine if ID is already 32-byte hex (0x...) or human-readable identifier
       let computedId: `0x${string}`
       if (rawId.startsWith('0x') && rawId.length === 66) {
         computedId = rawId as `0x${string}`
@@ -327,10 +359,10 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         computedId = (await computeSha256Hex(rawId)) as `0x${string}`
       }
 
-      const onChainRecord = await readBotchainDataset(computedId)
+      const onChainRecord = await readBotchainDataset(computedId, selectedChainId)
 
       if (!onChainRecord.datasetHash || onChainRecord.datasetHash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-        throw new Error(`Dataset ID ${rawId} was not found on Bohr Testnet registry.`)
+        throw new Error(`Dataset ID ${rawId} was not found on ${currentNetwork.name} registry.`)
       }
 
       setStoredRecord({
@@ -343,7 +375,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         isLiveOnChain: true,
       })
 
-      setInfoMessage(`Successfully loaded dataset record from Bohr Testnet for ID: ${rawId}`)
+      setInfoMessage(`Successfully loaded dataset record from ${currentNetwork.name} for ID: ${rawId}`)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch on-chain dataset'
       setErrorMessage(msg)
@@ -376,51 +408,107 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
 
   return (
     <div className="space-y-6">
-      {/* Network Header Banner */}
+      {/* Network Header Banner & Selector */}
       <Panel className="border-[#38bdf8]/20 bg-gradient-to-r from-[#0d1c2e] via-[#0b1623] to-[#0d1c2e]">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]" />
-              <h2 className="text-lg font-semibold tracking-wide text-white">
-                BOT CHAIN TESTNET — CHAIN ID {BOTCHAIN_TESTNET.chainId}
-              </h2>
-              {isLiveReady ? (
-                <span className="rounded-md border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-0.5 text-xs text-[#7dd3fc]">
-                  LIVE ON-CHAIN READY
+        <div className="flex flex-col gap-4">
+          {/* Network Selector Tabs */}
+          <div className="flex flex-wrap items-center justify-between border-b border-white/10 pb-3 gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Target Network:</span>
+              <div className="flex rounded-lg bg-black/40 p-1 border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedChainId(BOTCHAIN_MAINNET.chainId)}
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    isMainnetMode
+                      ? 'bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${isMainnetMode ? 'bg-slate-950' : 'bg-sky-400'}`} />
+                  BOT Chain Mainnet (677)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedChainId(BOTCHAIN_TESTNET.chainId)}
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    !isMainnetMode
+                      ? 'bg-sky-500 text-slate-950 shadow-sm shadow-sky-500/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${!isMainnetMode ? 'bg-slate-950' : 'bg-emerald-400'}`} />
+                  Bohr Testnet (968) [Pilot Proof]
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <a
+                href={currentNetwork.blockExplorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-sky-400 hover:text-sky-300 hover:underline"
+              >
+                <span>{isMainnetMode ? 'scan.botchain.ai' : 'scan.bohr.life'}</span>
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]" />
+                <h2 className="text-lg font-semibold tracking-wide text-white">
+                  {currentNetwork.name.toUpperCase()} — CHAIN ID {currentNetwork.chainId}
+                </h2>
+                {isLiveReady ? (
+                  <span className="rounded-md border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-0.5 text-xs text-[#7dd3fc]">
+                    LIVE ON-CHAIN READY
+                  </span>
+                ) : registryLiveResult.status === 'CHECKING' ? (
+                  <span className="rounded-md border border-slate-500/30 bg-slate-500/10 px-2 py-0.5 text-xs font-medium text-slate-300">
+                    VERIFYING ON-CHAIN STATUS...
+                  </span>
+                ) : isMainnetMode ? (
+                  <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+                    MAINNET DEPLOYMENT PENDING (1 BOT FUNDED)
+                  </span>
+                ) : (
+                  <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+                    LOCAL SIMULATION — NO ON-CHAIN TRANSACTION
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-slate-400">
+                {isMainnetMode
+                  ? 'Mainnet registry interface: O(1) state readback decoupled from restricted eth_getLogs. Public registration strictly disabled.'
+                  : 'Deterministic Register → Read → Verify demonstration prepared for Leon, Roy, and Josh.'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs">
+                <span className="text-slate-500">RPC: </span>
+                <span className="font-mono text-slate-300">
+                  {currentNetwork.rpcUrl.replace('https://', '')}
                 </span>
-              ) : registryLiveResult.status === 'CHECKING' ? (
-                <span className="rounded-md border border-slate-500/30 bg-slate-500/10 px-2 py-0.5 text-xs font-medium text-slate-300">
-                  VERIFYING ON-CHAIN STATUS...
-                </span>
+              </div>
+              {!isWalletOnSelectedChain ? (
+                <button
+                  type="button"
+                  onClick={handleSwitchNetwork}
+                  className="rounded-xl bg-[#0284c7] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[#0369a1]"
+                >
+                  Switch to {isMainnetMode ? 'BOT Chain Mainnet (677)' : 'Bohr Testnet (968)'}
+                </button>
               ) : (
-                <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
-                  LOCAL SIMULATION — NO ON-CHAIN TRANSACTION
+                <span className="flex items-center gap-1.5 rounded-xl border border-[#22c55e]/30 bg-[#22c55e]/10 px-3 py-2 text-xs font-medium text-[#4ade80]">
+                  <CheckCircle2 size={14} /> Connected to {currentNetwork.chainId}
                 </span>
               )}
             </div>
-            <p className="text-sm text-slate-400">
-              Deterministic Register → Read → Verify demonstration prepared for Leon, Roy, and Josh.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs">
-              <span className="text-slate-500">RPC: </span>
-              <span className="font-mono text-slate-300">rpc.bohr.life</span>
-            </div>
-            {!isBohrChain ? (
-              <button
-                onClick={handleSwitchToBotChain}
-                className="rounded-xl bg-[#0284c7] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[#0369a1]"
-              >
-                Switch to Bohr Testnet
-              </button>
-            ) : (
-              <span className="flex items-center gap-1.5 rounded-xl border border-[#22c55e]/30 bg-[#22c55e]/10 px-3 py-2 text-xs font-medium text-[#4ade80]">
-                <CheckCircle2 size={14} /> Connected to 968
-              </span>
-            )}
           </div>
         </div>
       </Panel>
@@ -437,15 +525,21 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         <div className="space-y-1">
           <p className="font-medium text-white">
             {isLiveReady
-              ? 'Testnet Registry Contract Active'
+              ? `${currentNetwork.name} Registry Contract Active`
+              : isMainnetMode
+              ? 'MAINNET DEPLOYMENT PENDING — AWAITING BROADCAST AUTHORIZATION'
               : 'LOCAL SIMULATION — NO ON-CHAIN TRANSACTION'}
           </p>
           <p className="leading-relaxed opacity-90">
             {isLiveReady ? (
               <span>
-                Verified registry contract active on Bohr Testnet at{' '}
+                Verified registry contract active on {currentNetwork.name} at{' '}
                 <span className="font-mono text-[#4ade80]">{registryLiveResult.address}</span>. Live transactions
-                require connected wallet on Bohr Testnet (Chain ID 968) and test gas.
+                require connected wallet on {currentNetwork.name} (Chain ID {currentNetwork.chainId}) and native BOT gas.
+              </span>
+            ) : isMainnetMode ? (
+              <span>
+                Deployment wallet <span className="font-mono text-sky-300">0x31A826bB9D5F6087d94CDA31945C1234d061b788</span> is funded with <span className="font-bold text-emerald-400">1.0 BOT</span> on BOT Chain Mainnet (Tx: <a href="https://scan.botchain.ai/tx/0xb989a24ecb5491c6f023fdd7a3ede1365749720d2566f135387d8d3fdc859ea9" target="_blank" rel="noopener noreferrer" className="font-mono text-sky-400 underline">0xb989a24e...</a>). Public registration is hardcoded to disabled. Core verification uses direct state calls without requiring <span className="font-mono text-slate-300">eth_getLogs</span>. In accordance with strict deployment safety policy, broadcasting to mainnet requires explicit authorization.
               </span>
             ) : registryLiveResult.status === 'NOT_DEPLOYED' ? (
               <span>
@@ -453,11 +547,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               </span>
             ) : registryLiveResult.status === 'RPC_ERROR' || registryLiveResult.status === 'WRONG_CHAIN' ? (
               <span>
-                Bohr Testnet connection unverified: {registryLiveResult.error}. Operating strictly in local simulation mode without fabricating blockchain transaction hashes.
+                {currentNetwork.name} connection unverified: {registryLiveResult.error}. Operating strictly in local simulation mode without fabricating blockchain transaction hashes.
               </span>
             ) : (
               <span>
-                BotChainDatasetRegistry is not yet deployed on Bohr Testnet. Claims of on-chain verification are disabled.
+                BotChainDatasetRegistry is not yet deployed on {currentNetwork.name}. Claims of on-chain verification are disabled.
                 The console operates strictly in local simulation mode without fabricating blockchain transaction hashes or substituting local state for real on-chain readback.
               </span>
             )}
@@ -502,17 +596,21 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             }`}
           >
             <Search size={14} />
-            In-App Bohr Contract Explorer
+            In-App Contract Explorer
           </button>
         </div>
 
         <a
-          href={`https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`}
+          href={
+            isMainnetMode
+              ? (registryLiveResult.address ? `https://scan.botchain.ai/address/${registryLiveResult.address}` : 'https://scan.botchain.ai')
+              : `https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`
+          }
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 hover:underline"
         >
-          <span>View on scan.bohr.life</span>
+          <span>View on {isMainnetMode ? 'scan.botchain.ai' : 'scan.bohr.life'}</span>
           <ExternalLink size={12} />
         </a>
       </div>
@@ -521,380 +619,384 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         <>
           {/* 3-Step Pilot Flow */}
           <div className="grid gap-6 lg:grid-cols-3">
-        {/* Step 1: Canonical Hash & Register */}
-        <Panel className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-            <Cpu className="text-[#38bdf8]" size={18} />
-            <h3 className="font-semibold text-white">1. Register Dataset</h3>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div>
-              <label className="text-slate-400">Dataset Identifier</label>
-              <input
-                type="text"
-                value={datasetIdInput}
-                onChange={(e) => setDatasetIdInput(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-slate-400">Version</label>
-                <input
-                  type="text"
-                  value={versionInput}
-                  onChange={(e) => setVersionInput(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
-                />
+            {/* Step 1: Canonical Hash & Register */}
+            <Panel className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <Cpu className="text-[#38bdf8]" size={18} />
+                <h3 className="font-semibold text-white">1. Register Dataset</h3>
               </div>
-              <div>
-                <label className="text-slate-400">Public Metadata URI</label>
-                <input
-                  type="text"
-                  value={metadataUriInput}
-                  onChange={(e) => setMetadataUriInput(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="text-slate-400">Synthetic Payload (JSON)</label>
-              <textarea
-                rows={6}
-                value={rawJson}
-                onChange={(e) => setRawJson(e.target.value)}
-                className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#38bdf8]"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleComputeHash}
-                disabled={isHashing}
-                className="flex-1 rounded-lg border border-white/10 bg-white/[0.05] py-2 text-slate-200 hover:bg-white/[0.08]"
-              >
-                {isHashing ? 'Computing...' : 'Canonicalize & Hash'}
-              </button>
-              <button
-                type="button"
-                onClick={handleRegisterRecord}
-                disabled={isSubmitting}
-                className={`flex-1 rounded-lg py-2 font-medium text-white transition ${
-                  isLiveReady
-                    ? 'bg-[#0284c7] hover:bg-[#0369a1]'
-                    : 'bg-amber-600 hover:bg-amber-700'
-                }`}
-              >
-                {isSubmitting
-                  ? 'Processing...'
-                  : isLiveReady
-                  ? 'Submit On-Chain'
-                  : 'Stage Local Simulation'}
-              </button>
-            </div>
-
-            {calculatedHash && (
-              <div className="rounded-lg bg-black/40 p-2.5 font-mono text-[10px] text-slate-300 break-all border border-white/5">
-                <span className="text-[#38bdf8]">SHA-256: </span>
-                {calculatedHash}
-              </div>
-            )}
-          </div>
-        </Panel>
-
-        {/* Step 2: Read Stored Record */}
-        <Panel className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-            <Database className="text-[#4ade80]" size={18} />
-            <h3 className="font-semibold text-white">2. Read Stored Record</h3>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2 space-y-1.5">
-              <label className="text-[11px] text-slate-400">Load On-Chain Record by ID</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="ID (e.g. BOT-SYNTH-001 or 0x...)"
-                  value={loadDatasetIdInput}
-                  onChange={(e) => setLoadDatasetIdInput(e.target.value)}
-                  className="flex-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#4ade80]"
-                />
-                <button
-                  type="button"
-                  onClick={handleFetchOnChainRecord}
-                  disabled={isLoadingRecord}
-                  className="rounded-md bg-emerald-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
-                >
-                  {isLoadingRecord ? 'Fetching...' : 'Query'}
-                </button>
-              </div>
-            </div>
-
-            {storedRecord ? (
-              <div className="space-y-2.5">
-                <div className="rounded-lg bg-black/30 p-3 border border-white/5 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Record Status:</span>
-                    {storedRecord.isLiveOnChain ? (
-                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/30">
-                        CONFIRMED ON-CHAIN (RPC READBACK)
-                      </span>
-                    ) : (
-                      <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/30">
-                        LOCAL SIMULATION — NO ON-CHAIN TRANSACTION
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-slate-400 pt-1">Dataset ID:</div>
-                  <div className="font-mono text-[11px] text-[#7dd3fc] break-all">{storedRecord.datasetId}</div>
-                  
-                  <div className="text-slate-400 pt-1">Stored Content Hash:</div>
-                  <div className="font-mono text-[11px] text-[#4ade80] break-all">{storedRecord.datasetHash}</div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div>
-                      <div className="text-slate-400">Version:</div>
-                      <div className="font-mono text-white">{storedRecord.version}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400">Timestamp:</div>
-                      <div className="font-mono text-white">{new Date(storedRecord.timestamp * 1000).toLocaleTimeString()}</div>
-                    </div>
-                  </div>
-
-                  <div className="text-slate-400 pt-1">Submitter:</div>
-                  <div className="font-mono text-[11px] text-slate-300 break-all">{storedRecord.submitter}</div>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-slate-400">Dataset Identifier</label>
+                  <input
+                    type="text"
+                    value={datasetIdInput}
+                    onChange={(e) => setDatasetIdInput(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
+                  />
                 </div>
 
-                {storedRecord.isLiveOnChain && storedRecord.txHash ? (
-                  <div className="rounded-lg bg-[#0d1c2e] p-2.5 border border-[#38bdf8]/20 flex items-center justify-between">
-                    <span className="text-slate-400">Transaction:</span>
-                    <a
-                      href={getExplorerTxUrl(storedRecord.txHash, BOTCHAIN_TESTNET.chainId)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 font-mono text-[11px] text-[#38bdf8] hover:underline"
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-400">Version</label>
+                    <input
+                      type="text"
+                      value={versionInput}
+                      onChange={(e) => setVersionInput(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400">Public Metadata URI</label>
+                    <input
+                      type="text"
+                      value={metadataUriInput}
+                      onChange={(e) => setMetadataUriInput(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-400">Synthetic Payload (JSON)</label>
+                  <textarea
+                    rows={6}
+                    value={rawJson}
+                    onChange={(e) => setRawJson(e.target.value)}
+                    className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#38bdf8]"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleComputeHash}
+                    disabled={isHashing}
+                    className="flex-1 rounded-lg border border-white/10 bg-white/[0.05] py-2 text-slate-200 hover:bg-white/[0.08]"
+                  >
+                    {isHashing ? 'Computing...' : 'Canonicalize & Hash'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRegisterRecord}
+                    disabled={isSubmitting}
+                    className={`flex-1 rounded-lg py-2 font-medium text-white transition ${
+                      isLiveReady
+                        ? 'bg-[#0284c7] hover:bg-[#0369a1]'
+                        : isMainnetMode
+                        ? 'bg-amber-600/80 hover:bg-amber-600'
+                        : 'bg-amber-600 hover:bg-amber-700'
+                    }`}
+                  >
+                    {isSubmitting
+                      ? 'Processing...'
+                      : isLiveReady
+                      ? 'Submit On-Chain'
+                      : isMainnetMode
+                      ? 'Stage Simulation (Mainnet)'
+                      : 'Stage Local Simulation'}
+                  </button>
+                </div>
+
+                {calculatedHash && (
+                  <div className="rounded-lg bg-black/40 p-2.5 font-mono text-[10px] text-slate-300 break-all border border-white/5">
+                    <span className="text-[#38bdf8]">SHA-256: </span>
+                    {calculatedHash}
+                  </div>
+                )}
+              </div>
+            </Panel>
+
+            {/* Step 2: Read Stored Record */}
+            <Panel className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <Database className="text-[#4ade80]" size={18} />
+                <h3 className="font-semibold text-white">2. Read Stored Record</h3>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2 space-y-1.5">
+                  <label className="text-[11px] text-slate-400">Load On-Chain Record by ID</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="ID (e.g. BOT-SYNTH-001 or 0x...)"
+                      value={loadDatasetIdInput}
+                      onChange={(e) => setLoadDatasetIdInput(e.target.value)}
+                      className="flex-1 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#4ade80]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleFetchOnChainRecord}
+                      disabled={isLoadingRecord}
+                      className="rounded-md bg-emerald-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
                     >
-                      {storedRecord.txHash.slice(0, 10)}...{storedRecord.txHash.slice(-6)}
-                      <ExternalLink size={12} />
-                    </a>
+                      {isLoadingRecord ? 'Fetching...' : 'Query'}
+                    </button>
                   </div>
-                ) : (
-                  <div className="rounded-lg bg-amber-950/30 p-2.5 border border-amber-500/20 text-[11px] text-amber-300">
-                    <span>{storedRecord.isLiveOnChain ? 'Record read independently from on-chain state.' : 'Local simulation only. No on-chain transaction hash or block explorer record exists.'}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center text-slate-500">
-                <Layers size={32} className="mb-2 opacity-40" />
-                <p>No record loaded or registered yet.</p>
-                <p className="text-[11px] text-slate-600 mt-1">Submit in Step 1 or query an ID above to inspect state.</p>
-              </div>
-            )}
-          </div>
-        </Panel>
+                </div>
 
-        {/* Step 3: Verify Integrity */}
-        <Panel className="space-y-4">
-          <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-            <Shield className="text-[#a78bfa]" size={18} />
-            <h3 className="font-semibold text-white">3. Verify Integrity</h3>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <p className="text-slate-400 text-[11px]">
-              Recalculates canonical SHA-256 against stored hash to verify data integrity without corruption or tampering.
-            </p>
-
-            <div className="flex items-center justify-between">
-              <label className="text-slate-400">Verify Candidate Payload</label>
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    const parsed = JSON.parse(verificationInput)
-                    if (parsed.samples && parsed.samples[0]) {
-                      parsed.samples[0].gammaCount = 999.9
-                    } else {
-                      parsed.sensorReadings = [99.9, 99.9, 99.9]
-                    }
-                    setVerificationInput(JSON.stringify(parsed, null, 2))
-                    setVerificationResult('IDLE')
-                    setInfoMessage('Altered payload sensor reading (gammaCount: 999.9) to simulate data corruption.')
-                  } catch {
-                    setErrorMessage('Failed to alter JSON payload.')
-                  }
-                }}
-                className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300 hover:bg-amber-500/20"
-              >
-                Simulate Tampered Reading
-              </button>
-            </div>
-            <textarea
-              rows={6}
-              value={verificationInput}
-              onChange={(e) => { setVerificationInput(e.target.value); setVerificationResult('IDLE') }}
-              className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#a78bfa]"
-            />
-
-            <button
-              type="button"
-              onClick={handleVerify}
-              disabled={!storedRecord}
-              className="w-full rounded-lg bg-[#7c3aed] py-2 font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
-            >
-{storedRecord?.isLiveOnChain ? 'Verify Against On-Chain Hash' : 'Verify Against Staged Simulation Hash'}
-            </button>
-
-            {!storedRecord?.isLiveOnChain && storedRecord && (
-              <p className="text-[10px] text-amber-300/80 italic">
-                * Note: Claims of on-chain verification are disabled during local simulation.
-              </p>
-            )}
-
-            {verificationResult !== 'IDLE' && (
-              <div
-                className={`rounded-xl border p-4 text-center font-bold tracking-wider ${
-                  verificationResult === 'MATCH'
-                    ? 'border-[#22c55e]/40 bg-[#22c55e]/10 text-[#4ade80]'
-                    : 'border-red-500/40 bg-red-500/10 text-red-400'
-                }`}
-              >
-                {verificationResult === 'MATCH' ? (
-                  <div className="flex flex-col items-center gap-1">
-<span className="flex items-center gap-1.5 text-sm">
-                      <CheckCircle2 size={18} />
-                      {storedRecord?.isLiveOnChain
-                        ? 'MATCH [ON-CHAIN RECORD INTEGRITY VERIFIED]'
-                        : 'MATCH [LOCAL SIMULATION ONLY — NOT ON-CHAIN]'}
-                    </span>
-                    <span className="text-[10px] font-normal text-slate-300">
-                      {storedRecord?.isLiveOnChain
-                        ? 'Calculated SHA-256 matches independently retrieved on-chain state'
-                        : 'Calculated SHA-256 matches local simulation record (no on-chain proof)'}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-sm text-red-400">
-                      <XCircle size={18} /> MISMATCH [PAYLOAD ALTERED]
-                    </span>
-                    <span className="text-[10px] font-normal text-slate-300">
-                      Recalculated hash does not match stored on-chain record
-                    </span>
-                    <div className="w-full text-left font-mono text-[10px] bg-black/40 rounded p-2 space-y-1 border border-red-500/20">
-                      <div className="truncate">
-                        <span className="text-slate-500">Stored on-chain: </span>
-                        <span className="text-emerald-400">{storedRecord?.datasetHash}</span>
+                {storedRecord ? (
+                  <div className="space-y-2.5">
+                    <div className="rounded-lg bg-black/30 p-3 border border-white/5 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Record Status:</span>
+                        {storedRecord.isLiveOnChain ? (
+                          <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/30">
+                            CONFIRMED ON-CHAIN (RPC READBACK)
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/30">
+                            LOCAL SIMULATION — NO ON-CHAIN TRANSACTION
+                          </span>
+                        )}
                       </div>
-                      <div className="truncate">
-                        <span className="text-slate-500">Altered payload: </span>
-                        <span className="text-red-400">{lastCalculatedCandidateHash}</span>
+
+                      <div className="text-slate-400 pt-1">Dataset ID:</div>
+                      <div className="font-mono text-[11px] text-[#7dd3fc] break-all">{storedRecord.datasetId}</div>
+                      
+                      <div className="text-slate-400 pt-1">Stored Content Hash:</div>
+                      <div className="font-mono text-[11px] text-[#4ade80] break-all">{storedRecord.datasetHash}</div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div>
+                          <div className="text-slate-400">Version:</div>
+                          <div className="font-mono text-white">{storedRecord.version}</div>
+                        </div>
+                        <div>
+                          <div className="text-slate-400">Timestamp:</div>
+                          <div className="font-mono text-white">{new Date(storedRecord.timestamp * 1000).toLocaleTimeString()}</div>
+                        </div>
                       </div>
+
+                      <div className="text-slate-400 pt-1">Submitter:</div>
+                      <div className="font-mono text-[11px] text-slate-300 break-all">{storedRecord.submitter}</div>
                     </div>
+
+                    {storedRecord.isLiveOnChain && storedRecord.txHash ? (
+                      <div className="rounded-lg bg-[#0d1c2e] p-2.5 border border-[#38bdf8]/20 flex items-center justify-between">
+                        <span className="text-slate-400">Transaction:</span>
+                        <a
+                          href={getExplorerTxUrl(storedRecord.txHash, currentNetwork.chainId)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 font-mono text-[11px] text-[#38bdf8] hover:underline"
+                        >
+                          {storedRecord.txHash.slice(0, 10)}...{storedRecord.txHash.slice(-6)}
+                          <ExternalLink size={12} />
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-amber-950/30 p-2.5 border border-amber-500/20 text-[11px] text-amber-300">
+                        <span>{storedRecord.isLiveOnChain ? 'Record read independently from on-chain state.' : 'Local simulation only. No on-chain transaction hash or block explorer record exists.'}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center text-slate-500">
+                    <Layers size={32} className="mb-2 opacity-40" />
+                    <p>No record loaded or registered yet.</p>
+                    <p className="text-[11px] text-slate-600 mt-1">Submit in Step 1 or query an ID above to inspect state.</p>
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </Panel>
-      </div>
+            </Panel>
 
-      {/* Live Event Activity Stream Table */}
-      {isLiveReady && (
-        <Panel className="space-y-4">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2">
-              <Activity className="text-[#38bdf8]" size={18} />
-              <div>
-                <h3 className="font-semibold text-white">Live On-Chain Event Activity Stream</h3>
-                <p className="text-[11px] text-slate-400">
-                  Real-time dataset records anchored into Bohr Testnet contract <span className="font-mono text-slate-300">({registryLiveResult.address?.slice(0, 8)}...{registryLiveResult.address?.slice(-6)})</span>
-                </p>
+            {/* Step 3: Verify Integrity */}
+            <Panel className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <Shield className="text-[#a78bfa]" size={18} />
+                <h3 className="font-semibold text-white">3. Verify Integrity</h3>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={loadActivityStream}
-              disabled={isLoadingActivity}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08]"
-            >
-              <RefreshCw size={12} className={isLoadingActivity ? 'animate-spin' : ''} />
-              {isLoadingActivity ? 'Refreshing...' : 'Refresh Activity'}
-            </button>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-slate-400 text-[11px]">
+                  Recalculates canonical SHA-256 against stored hash to verify data integrity without corruption or tampering.
+                </p>
+
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-400">Verify Candidate Payload</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        const parsed = JSON.parse(verificationInput)
+                        if (parsed.samples && parsed.samples[0]) {
+                          parsed.samples[0].gammaCount = 999.9
+                        } else {
+                          parsed.sensorReadings = [99.9, 99.9, 99.9]
+                        }
+                        setVerificationInput(JSON.stringify(parsed, null, 2))
+                        setVerificationResult('IDLE')
+                        setInfoMessage('Altered payload sensor reading (gammaCount: 999.9) to simulate data corruption.')
+                      } catch {
+                        setErrorMessage('Failed to alter JSON payload.')
+                      }
+                    }}
+                    className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300 hover:bg-amber-500/20"
+                  >
+                    Simulate Tampered Reading
+                  </button>
+                </div>
+                <textarea
+                  rows={6}
+                  value={verificationInput}
+                  onChange={(e) => { setVerificationInput(e.target.value); setVerificationResult('IDLE') }}
+                  className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#a78bfa]"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleVerify}
+                  disabled={!storedRecord}
+                  className="w-full rounded-lg bg-[#7c3aed] py-2 font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
+                >
+                  {storedRecord?.isLiveOnChain ? 'Verify Against On-Chain Hash' : 'Verify Against Staged Simulation Hash'}
+                </button>
+
+                {!storedRecord?.isLiveOnChain && storedRecord && (
+                  <p className="text-[10px] text-amber-300/80 italic">
+                    * Note: Claims of on-chain verification are disabled during local simulation.
+                  </p>
+                )}
+
+                {verificationResult !== 'IDLE' && (
+                  <div
+                    className={`rounded-xl border p-4 text-center font-bold tracking-wider ${
+                      verificationResult === 'MATCH'
+                        ? 'border-[#22c55e]/40 bg-[#22c55e]/10 text-[#4ade80]'
+                        : 'border-red-500/40 bg-red-500/10 text-red-400'
+                    }`}
+                  >
+                    {verificationResult === 'MATCH' ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="flex items-center gap-1.5 text-sm">
+                          <CheckCircle2 size={18} />
+                          {storedRecord?.isLiveOnChain
+                            ? 'MATCH [ON-CHAIN RECORD INTEGRITY VERIFIED]'
+                            : 'MATCH [LOCAL SIMULATION ONLY — NOT ON-CHAIN]'}
+                        </span>
+                        <span className="text-[10px] font-normal text-slate-300">
+                          {storedRecord?.isLiveOnChain
+                            ? 'Calculated SHA-256 matches independently retrieved on-chain state'
+                            : 'Calculated SHA-256 matches local simulation record (no on-chain proof)'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="flex items-center gap-1.5 text-sm text-red-400">
+                          <XCircle size={18} /> MISMATCH [PAYLOAD ALTERED]
+                        </span>
+                        <span className="text-[10px] font-normal text-slate-300">
+                          Recalculated hash does not match stored on-chain record
+                        </span>
+                        <div className="w-full text-left font-mono text-[10px] bg-black/40 rounded p-2 space-y-1 border border-red-500/20">
+                          <div className="truncate">
+                            <span className="text-slate-500">Stored on-chain: </span>
+                            <span className="text-emerald-400">{storedRecord?.datasetHash}</span>
+                          </div>
+                          <div className="truncate">
+                            <span className="text-slate-500">Altered payload: </span>
+                            <span className="text-red-400">{lastCalculatedCandidateHash}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Panel>
           </div>
 
-          {recentRecords.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400">
-              {isLoadingActivity ? 'Reading records from Bohr Testnet...' : 'No records registered on-chain yet.'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 text-[11px] font-medium text-slate-400">
-                    <th className="py-2.5 px-3">Dataset ID</th>
-                    <th className="py-2.5 px-3">Content SHA-256</th>
-                    <th className="py-2.5 px-3">Version</th>
-                    <th className="py-2.5 px-3">Submitter</th>
-                    <th className="py-2.5 px-3">Timestamp</th>
-                    <th className="py-2.5 px-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 font-mono">
-                  {recentRecords.map((r, i) => (
-                    <tr key={i} className="hover:bg-white/[0.02] transition">
-                      <td className="py-2.5 px-3 font-semibold text-slate-200">
-                        {r.datasetId.startsWith('0x444154554d') ? 'DATUMX-BOT-LIVE-001' : `${r.datasetId.slice(0, 10)}...${r.datasetId.slice(-6)}`}
-                      </td>
-                      <td className="py-2.5 px-3 text-[#38bdf8]">
-                        {r.datasetHash.slice(0, 10)}...{r.datasetHash.slice(-8)}
-                      </td>
-                      <td className="py-2.5 px-3 font-sans text-slate-300">{r.version}</td>
-                      <td className="py-2.5 px-3 text-slate-400">
-                        {r.submitter.slice(0, 6)}...{r.submitter.slice(-4)}
-                      </td>
-                      <td className="py-2.5 px-3 font-sans text-slate-400">
-                        {new Date(r.timestamp * 1000).toLocaleString([], { hour12: false })}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-sans">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStoredRecord({
-                              datasetId: r.datasetId,
-                              datasetHash: r.datasetHash,
-                              version: r.version,
-                              metadataURI: r.metadataURI,
-                              submitter: r.submitter,
-                              timestamp: r.timestamp,
-                              isLiveOnChain: true,
-                            })
-                            setInfoMessage(`Loaded dataset ${r.datasetId.slice(0, 10)}... into Step 2 & 3 for verification.`)
-                          }}
-                          className="rounded bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-400 hover:bg-sky-500/20"
-                        >
-                          Verify in Step 3
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {/* Live Event Activity Stream Table */}
+          {isLiveReady && (
+            <Panel className="space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <Activity className="text-[#38bdf8]" size={18} />
+                  <div>
+                    <h3 className="font-semibold text-white">Live On-Chain Event Activity Stream</h3>
+                    <p className="text-[11px] text-slate-400">
+                      Real-time dataset records anchored into {currentNetwork.name} contract <span className="font-mono text-slate-300">({registryLiveResult.address?.slice(0, 8)}...{registryLiveResult.address?.slice(-6)})</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadActivityStream}
+                  disabled={isLoadingActivity}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08]"
+                >
+                  <RefreshCw size={12} className={isLoadingActivity ? 'animate-spin' : ''} />
+                  {isLoadingActivity ? 'Refreshing...' : 'Refresh Activity'}
+                </button>
+              </div>
+
+              {recentRecords.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  {isLoadingActivity ? `Reading records from ${currentNetwork.name}...` : 'No records registered on-chain yet.'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-white/10 text-[11px] font-medium text-slate-400">
+                        <th className="py-2.5 px-3">Dataset ID</th>
+                        <th className="py-2.5 px-3">Content SHA-256</th>
+                        <th className="py-2.5 px-3">Version</th>
+                        <th className="py-2.5 px-3">Submitter</th>
+                        <th className="py-2.5 px-3">Timestamp</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 font-mono">
+                      {recentRecords.map((r, i) => (
+                        <tr key={i} className="hover:bg-white/[0.02] transition">
+                          <td className="py-2.5 px-3 font-semibold text-slate-200">
+                            {r.datasetId.startsWith('0x444154554d') ? 'DATUMX-BOT-LIVE-001' : `${r.datasetId.slice(0, 10)}...${r.datasetId.slice(-6)}`}
+                          </td>
+                          <td className="py-2.5 px-3 text-[#38bdf8]">
+                            {r.datasetHash.slice(0, 10)}...{r.datasetHash.slice(-8)}
+                          </td>
+                          <td className="py-2.5 px-3 font-sans text-slate-300">{r.version}</td>
+                          <td className="py-2.5 px-3 text-slate-400">
+                            {r.submitter.slice(0, 6)}...{r.submitter.slice(-4)}
+                          </td>
+                          <td className="py-2.5 px-3 font-sans text-slate-400">
+                            {new Date(r.timestamp * 1000).toLocaleString([], { hour12: false })}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-sans">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStoredRecord({
+                                  datasetId: r.datasetId,
+                                  datasetHash: r.datasetHash,
+                                  version: r.version,
+                                  metadataURI: r.metadataURI,
+                                  submitter: r.submitter,
+                                  timestamp: r.timestamp,
+                                  isLiveOnChain: true,
+                                })
+                                setInfoMessage(`Loaded dataset ${r.datasetId.slice(0, 10)}... into Step 2 & 3 for verification.`)
+                              }}
+                              className="rounded bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-400 hover:bg-sky-500/20"
+                            >
+                              Verify in Step 3
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
           )}
-        </Panel>
-      )}
         </>
       ) : (
-        /* In-App Bohr Contract Explorer Tab */
+        /* In-App Contract Explorer Tab */
         <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Contract Overview & Stats Card */}
@@ -911,12 +1013,12 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 <div>
                   <span className="text-slate-400">Contract Address:</span>
                   <div className="font-mono text-[11px] text-[#4ade80] break-all">
-                    {registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}
+                    {registryLiveResult.address || (isMainnetMode ? 'Deployment Pending (0x31A8...b788 funded)' : '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7')}
                   </div>
                 </div>
                 <div>
                   <span className="text-slate-400">Network:</span>
-                  <div className="text-slate-200">Bohr Testnet (Chain ID 968)</div>
+                  <div className="text-slate-200">{currentNetwork.name} (Chain ID {currentNetwork.chainId})</div>
                 </div>
                 <div>
                   <span className="text-slate-400">Total Datasets Anchored:</span>
@@ -924,16 +1026,22 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 </div>
                 <div>
                   <span className="text-slate-400">Public Registration:</span>
-                  <div className="text-emerald-400 font-medium">Enabled (Open Testnet Access)</div>
+                  <div className={isMainnetMode ? 'text-amber-400 font-medium' : 'text-emerald-400 font-medium'}>
+                    {isMainnetMode ? 'Strictly Disabled (Owner Managed Pilot)' : 'Enabled (Open Testnet Access)'}
+                  </div>
                 </div>
                 <div className="pt-2">
                   <a
-                    href={`https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`}
+                    href={
+                      isMainnetMode
+                        ? (registryLiveResult.address ? `https://scan.botchain.ai/address/${registryLiveResult.address}` : 'https://scan.botchain.ai')
+                        : `https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-1.5 w-full rounded-lg border border-sky-500/30 bg-sky-500/10 py-2 font-medium text-sky-300 hover:bg-sky-500/20 transition"
                   >
-                    <span>Inspect on Bohr Explorer</span>
+                    <span>Inspect on {isMainnetMode ? 'BOT Chain Explorer' : 'Bohr Explorer'}</span>
                     <ExternalLink size={14} />
                   </a>
                 </div>
@@ -947,7 +1055,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 <h3 className="font-semibold text-white">Direct On-Chain State Reader</h3>
               </div>
               <p className="text-xs text-slate-400">
-                Call <code className="text-sky-300 font-mono">getDataset(bytes32)</code> directly against the live Bohr Testnet RPC without signing transactions.
+                Call <code className="text-sky-300 font-mono">getDataset(bytes32)</code> directly against the live {currentNetwork.name} RPC without signing transactions. Decoupled from restricted <code className="text-slate-300 font-mono">eth_getLogs</code>.
               </p>
 
               <div className="flex gap-2">
@@ -978,7 +1086,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                   ) : (
                     <div className="space-y-1.5 text-slate-300">
                       <div className="text-emerald-400 font-semibold flex items-center gap-1.5 pb-1 border-b border-white/5">
-                        <CheckCircle2 size={14} /> Record Found in Bohr Testnet State
+                        <CheckCircle2 size={14} /> Record Found in {currentNetwork.name} State
                       </div>
                       <div>
                         <span className="text-slate-500">datasetId: </span>
@@ -1025,7 +1133,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Database className="text-[#4ade80]" size={18} />
-                <h3 className="font-semibold text-white">All Deployed Datasets on Bohr Testnet</h3>
+                <h3 className="font-semibold text-white">All Deployed Datasets on {currentNetwork.name}</h3>
               </div>
               <button
                 type="button"
@@ -1039,7 +1147,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             </div>
 
             {recentRecords.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-400">No records found.</div>
+              <div className="py-8 text-center text-xs text-slate-400">
+                {isMainnetMode && !isLiveReady
+                  ? 'Mainnet registry contract deployment pending authorization. No records deployed on mainnet yet.'
+                  : 'No records found.'}
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
@@ -1050,7 +1162,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                       <th className="py-2.5 px-3">Version</th>
                       <th className="py-2.5 px-3">Submitter</th>
                       <th className="py-2.5 px-3">Timestamp (UTC)</th>
-                      <th className="py-2.5 px-3 text-right font-sans">Bohr Explorer</th>
+                      <th className="py-2.5 px-3 text-right font-sans">Explorer</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1065,7 +1177,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                         <td className="py-2.5 px-3 font-sans text-slate-300">{r.version}</td>
                         <td className="py-2.5 px-3 text-slate-400">
                           <a
-                            href={`https://scan.bohr.life/address/${r.submitter}`}
+                            href={
+                              isMainnetMode
+                                ? `https://scan.botchain.ai/address/${r.submitter}`
+                                : `https://scan.bohr.life/address/${r.submitter}`
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             className="hover:text-sky-300 hover:underline"
@@ -1078,12 +1194,16 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                         </td>
                         <td className="py-2.5 px-3 text-right font-sans">
                           <a
-                            href={`https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`}
+                            href={
+                              isMainnetMode
+                                ? `https://scan.botchain.ai/address/${registryLiveResult.address}`
+                                : `https://scan.bohr.life/address/${registryLiveResult.address || '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7'}`
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 rounded bg-sky-500/10 px-2 py-1 text-[11px] text-sky-400 hover:bg-sky-500/20"
                           >
-                            <span>scan.bohr.life</span>
+                            <span>{isMainnetMode ? 'scan.botchain.ai' : 'scan.bohr.life'}</span>
                             <ExternalLink size={10} />
                           </a>
                         </td>

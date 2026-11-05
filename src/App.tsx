@@ -59,6 +59,7 @@ export default function App() {
             onConnectWallet={connectWallet}
             onEnsureNetwork={ensureNetwork}
             getExplorerTxUrl={datumx.getExplorerTxUrl}
+            onNavigateToBotChain={() => datumx.setActiveNav('botchain')}
           />
         ) : null}
 

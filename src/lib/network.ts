@@ -1,5 +1,5 @@
 import { EXPLORER_TX_BASE, XRPL_EVM_TESTNET } from './web3Config'
-import { BOTCHAIN_TESTNET, type NetworkConfig } from './botchainConfig'
+import { BOTCHAIN_MAINNET, BOTCHAIN_TESTNET, type NetworkConfig } from './botchainConfig'
 
 export interface Eip1193Provider {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>
@@ -18,6 +18,9 @@ export function getEthereumProvider() {
 }
 
 export function getExplorerTxUrl(txHash: string, chainId: number = XRPL_EVM_TESTNET.chainId) {
+  if (chainId === BOTCHAIN_MAINNET.chainId) {
+    return `${BOTCHAIN_MAINNET.blockExplorerUrl}/tx/${txHash}`
+  }
   if (chainId === BOTCHAIN_TESTNET.chainId) {
     return `${BOTCHAIN_TESTNET.blockExplorerUrl}/tx/${txHash}`
   }
@@ -45,6 +48,10 @@ export async function addXRPLTestnet(provider: Eip1193Provider) {
 
 export async function addBotChainTestnet(provider: Eip1193Provider) {
   await addEthereumChain(provider, BOTCHAIN_TESTNET)
+}
+
+export async function addBotChainMainnet(provider: Eip1193Provider) {
+  await addEthereumChain(provider, BOTCHAIN_MAINNET)
 }
 
 export async function switchToNetwork(provider: Eip1193Provider, network: NetworkConfig) {
@@ -75,9 +82,18 @@ export async function switchToBotChainTestnet(provider: Eip1193Provider) {
   await switchToNetwork(provider, BOTCHAIN_TESTNET)
 }
 
+export async function switchToBotChainMainnet(provider: Eip1193Provider) {
+  await switchToNetwork(provider, BOTCHAIN_MAINNET)
+}
+
 export async function ensureCorrectNetwork(provider: Eip1193Provider, targetChainId: number = XRPL_EVM_TESTNET.chainId) {
   const currentChainId = String(await provider.request({ method: 'eth_chainId' })).toLowerCase()
-  const targetNetwork = targetChainId === BOTCHAIN_TESTNET.chainId ? BOTCHAIN_TESTNET : XRPL_EVM_TESTNET
+  let targetNetwork = XRPL_EVM_TESTNET
+  if (targetChainId === BOTCHAIN_MAINNET.chainId) {
+    targetNetwork = BOTCHAIN_MAINNET
+  } else if (targetChainId === BOTCHAIN_TESTNET.chainId) {
+    targetNetwork = BOTCHAIN_TESTNET
+  }
   if (currentChainId !== targetNetwork.chainIdHex.toLowerCase()) {
     await switchToNetwork(provider, targetNetwork)
   }
