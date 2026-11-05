@@ -175,7 +175,7 @@ export function TopNav({
                   ? 'Working...'
                   : wallet.isConnected && !isTargetNetwork
                   ? activeNav === 'botchain'
-                    ? 'Switch to Bohr Testnet'
+                    ? 'Switch to BOT Mainnet'
                     : 'Switch to XRPL EVM Testnet'
                   : shortenAddress(wallet.account)}
               </span>

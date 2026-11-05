@@ -96,6 +96,20 @@ export function OverviewPage({
               <span className="font-mono text-slate-400">
                 Wallet: <strong className="text-slate-200">0x31A8...b788</strong> (1.0 BOT Verified)
               </span>
+              <span className="text-slate-600">•</span>
+              <span className="font-mono text-slate-400">
+                Contract:{' '}
+                <span className="text-amber-300">Pending Broadcast Authorization</span> (Deterministic:{' '}
+                <a
+                  href="https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                >
+                  0xEe55...E9B7
+                </a>
+                )
+              </span>
             </div>
           </div>
 
