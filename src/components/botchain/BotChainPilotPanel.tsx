@@ -7,6 +7,7 @@ import { switchToBotChainMainnet, switchToBotChainTestnet, getEthereumProvider, 
 import {
   checkBotchainRegistryLiveStatus,
   readBotchainDataset,
+  verifyBotchainDatasetHash,
   submitBotchainDataset,
   validateRegistrationPrerequisites,
   fetchAllBotchainDatasets,
@@ -118,6 +119,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   // Verification state
   const [verificationInput, setVerificationInput] = useState<string>(JSON.stringify(defaultPayload, null, 2))
   const [verificationResult, setVerificationResult] = useState<'IDLE' | 'MATCH' | 'MISMATCH'>('IDLE')
+  const [isVerifying, setIsVerifying] = useState<boolean>(false)
 
   const configuredAddress = isMainnetMode
     ? (BOTCHAIN_MAINNET_CONFIG.registryAddress || BOTCHAIN_PILOT_CONFIG.mainnetRegistryAddress)
@@ -320,7 +322,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           )
         } else {
           setInfoMessage(
-            'LOCAL SIMULATION ONLY — Record staged in memory. No on-chain transaction was broadcast because BotChainDatasetRegistry is not yet deployed on Bohr Testnet.',
+            `LOCAL SIMULATION ONLY — Record staged in memory. Live write requires connected wallet with authorized submitter permissions on ${currentNetwork.name}.`,
           )
         }
       }
@@ -390,19 +392,35 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       return
     }
 
+    setIsVerifying(true)
+    setErrorMessage(null)
     try {
       const parsed = JSON.parse(verificationInput)
       const canonical = canonicalJsonStringify(parsed)
-      const recomputed = await computeSha256Hex(canonical)
+      const recomputed = (await computeSha256Hex(canonical)) as `0x${string}`
       setLastCalculatedCandidateHash(recomputed)
 
-      if (recomputed.toLowerCase() === storedRecord.datasetHash.toLowerCase()) {
-        setVerificationResult('MATCH')
+      if (storedRecord.isLiveOnChain && isLiveReady) {
+        // Genuine On-Chain Smart Contract State Verification via verifyDatasetHash(bytes32,bytes32)
+        const isMatch = await verifyBotchainDatasetHash(
+          storedRecord.datasetId,
+          recomputed,
+          selectedChainId,
+        )
+        setVerificationResult(isMatch ? 'MATCH' : 'MISMATCH')
       } else {
-        setVerificationResult('MISMATCH')
+        // Fallback for staged local simulation
+        if (recomputed.toLowerCase() === storedRecord.datasetHash.toLowerCase()) {
+          setVerificationResult('MATCH')
+        } else {
+          setVerificationResult('MISMATCH')
+        }
       }
-    } catch {
-      setErrorMessage('Invalid JSON syntax in verification input payload.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Invalid JSON syntax in verification input payload.'
+      setErrorMessage(msg)
+    } finally {
+      setIsVerifying(false)
     }
   }
 
@@ -849,10 +867,19 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 <button
                   type="button"
                   onClick={handleVerify}
-                  disabled={!storedRecord}
-                  className="w-full rounded-lg bg-[#7c3aed] py-2 font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50"
+                  disabled={!storedRecord || isVerifying}
+                  className="w-full rounded-lg bg-[#7c3aed] py-2 font-medium text-white hover:bg-[#6d28d9] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {storedRecord?.isLiveOnChain ? 'Verify Against On-Chain Hash' : 'Verify Against Staged Simulation Hash'}
+                  {isVerifying ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Querying verifyDatasetHash on-chain...</span>
+                    </>
+                  ) : storedRecord?.isLiveOnChain ? (
+                    'Verify On-Chain (verifyDatasetHash)'
+                  ) : (
+                    'Verify Against Staged Simulation Hash'
+                  )}
                 </button>
 
                 {!storedRecord?.isLiveOnChain && storedRecord && (
@@ -874,12 +901,12 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                         <span className="flex items-center gap-1.5 text-sm">
                           <CheckCircle2 size={18} />
                           {storedRecord?.isLiveOnChain
-                            ? 'MATCH [ON-CHAIN RECORD INTEGRITY VERIFIED]'
+                            ? 'MATCH [ON-CHAIN SMART CONTRACT VERIFIED]'
                             : 'MATCH [LOCAL SIMULATION ONLY — NOT ON-CHAIN]'}
                         </span>
                         <span className="text-[10px] font-normal text-slate-300">
                           {storedRecord?.isLiveOnChain
-                            ? 'Calculated SHA-256 matches independently retrieved on-chain state'
+                            ? 'On-chain verifyDatasetHash() returned true for recomputed SHA-256 digest'
                             : 'Calculated SHA-256 matches local simulation record (no on-chain proof)'}
                         </span>
                       </div>
@@ -889,7 +916,9 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                           <XCircle size={18} /> MISMATCH [PAYLOAD ALTERED]
                         </span>
                         <span className="text-[10px] font-normal text-slate-300">
-                          Recalculated hash does not match stored on-chain record
+                          {storedRecord?.isLiveOnChain
+                            ? 'On-chain verifyDatasetHash() returned false: altered payload rejected by smart contract'
+                            : 'Recalculated hash does not match stored on-chain record'}
                         </span>
                         <div className="w-full text-left font-mono text-[10px] bg-black/40 rounded p-2 space-y-1 border border-red-500/20">
                           <div className="truncate">

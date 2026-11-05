@@ -61,7 +61,7 @@ vi.mock('../lib/botchainConfig', () => ({
   },
 }))
 
-import { readBotchainDataset, submitBotchainDataset, validateRegistrationPrerequisites } from '../lib/botchainClient'
+import { readBotchainDataset, verifyBotchainDatasetHash, submitBotchainDataset, validateRegistrationPrerequisites } from '../lib/botchainClient'
 
 const ACCOUNT = '0x2222222222222222222222222222222222222222' as Hex
 const TX = ('0x' + '3'.repeat(64)) as Hex
@@ -159,6 +159,37 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
   it('does not read from an unverified chain or missing contract', async () => {
     mocks.getBytecode.mockResolvedValue(undefined)
     await expect(readBotchainDataset(args.datasetId, 968)).rejects.toThrow(/contract|code/i)
+    expect(mocks.readContract).not.toHaveBeenCalled()
+  })
+
+  it('executes on-chain verifyDatasetHash and returns true on matching candidate hash', async () => {
+    mocks.readContract.mockResolvedValue(true)
+    const result = await verifyBotchainDatasetHash(args.datasetId, args.datasetHash, 968)
+    expect(result).toBe(true)
+    expect(mocks.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: 'verifyDatasetHash',
+        args: [args.datasetId, args.datasetHash],
+      }),
+    )
+  })
+
+  it('executes on-chain verifyDatasetHash and returns false on mismatching candidate hash', async () => {
+    mocks.readContract.mockResolvedValue(false)
+    const alteredHash = ('0x' + '9'.repeat(64)) as Hex
+    const result = await verifyBotchainDatasetHash(args.datasetId, alteredHash, 968)
+    expect(result).toBe(false)
+    expect(mocks.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: 'verifyDatasetHash',
+        args: [args.datasetId, alteredHash],
+      }),
+    )
+  })
+
+  it('refuses to verify against an unverified chain or missing contract', async () => {
+    mocks.getBytecode.mockResolvedValue(undefined)
+    await expect(verifyBotchainDatasetHash(args.datasetId, args.datasetHash, 968)).rejects.toThrow(/contract|code/i)
     expect(mocks.readContract).not.toHaveBeenCalled()
   })
 

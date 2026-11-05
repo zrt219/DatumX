@@ -384,6 +384,35 @@ export async function readBotchainDataset(datasetId: `0x${string}`, targetChainI
 }
 
 /**
+ * Executes genuine on-chain smart contract hash verification via verifyDatasetHash(bytes32,bytes32).
+ */
+export async function verifyBotchainDatasetHash(
+  datasetId: `0x${string}`,
+  candidateHash: `0x${string}`,
+  targetChainId?: number,
+): Promise<boolean> {
+  const expectedChainId = targetChainId ?? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  await ensureRegistryExists(expectedChainId)
+  const client = expectedChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient
+  const network = expectedChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+  const address = expectedChainId === BOTCHAIN_MAINNET.chainId
+    ? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress || config.BOTCHAIN_PILOT_CONFIG?.mainnetRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(677))
+    : (config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(968))
+
+  if (!address) {
+    throw new Error(`BotChainDatasetRegistry is not deployed or configured on ${network.name}.`)
+  }
+
+  return client.readContract({
+    address,
+    abi: botChainRegistryAbi,
+    functionName: 'verifyDatasetHash',
+    args: [datasetId, candidateHash],
+  })
+}
+
+
+/**
  * Fetches all registered dataset records from the active BOT Chain registry contract.
  */
 export async function fetchAllBotchainDatasets(targetChainId?: number): Promise<Array<{

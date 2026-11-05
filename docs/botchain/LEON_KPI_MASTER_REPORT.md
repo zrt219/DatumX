@@ -73,6 +73,7 @@ This master status report directly addresses the six (6) partner KPI deliverable
      * Original Payload: `BOT-SYNTH-002` (Hash `0x8446f6c547e76332a84b56e14a14d31b08c848dfa1e021e64a03bfce4a6b484e`) ➔ `verifyDatasetHash` returns **`true` (MATCH)**.
      * Single-field altered payload (`gammaCount: 165.2` ➔ `999.9`): Modified Hash `0x7c431f80f87ba10accb0ef608bdcc4846fb2c0a160d2d62d43c0b3ec187e0ce9` ➔ `verifyDatasetHash` returns **`false` (MISMATCH)**.
      * Transaction: [`0xfd233c765f7b86693c27fdfe68d076dba3ce3fa5412cd4610b11a984fe1c10a0`](https://scan.bohr.life/tx/0xfd233c765f7b86693c27fdfe68d076dba3ce3fa5412cd4610b11a984fe1c10a0) at Block `28634582`.
+   - **In-App Smart Contract Verification**: `BotChainPilotPanel` directly invokes `verifyBotchainDatasetHash()` (`client.readContract` on `verifyDatasetHash(bytes32,bytes32)`) when verifying live records, ensuring authentic on-chain smart contract execution.
 
 ---
 
@@ -143,10 +144,10 @@ This master status report directly addresses the six (6) partner KPI deliverable
 
 | Test Suite | Commands | Tests Passed | Tests Failed | Execution Time |
 | :--- | :--- | :---: | :---: | :---: |
-| **Vitest Frontend Client Suite** | `npm run test` | **62 / 62** | 0 | 5.76s |
-| **Foundry Smart Contract Suite** | `forge test` | **57 / 57** | 0 | 45.38ms |
+| **Vitest Frontend Client Suite** | `npm run test` | **65 / 65** | 0 | 5.21s |
+| **Foundry Smart Contract Suite** | `forge test` | **57 / 57** | 0 | 44.66ms |
 | **ESLint Static Code Quality** | `npm run lint` | **0 errors / 0 warnings** | 0 | 5.82s |
-| **TypeScript Production Build** | `npm run build` | **0 errors / Clean build** | 0 | 1.42s |
+| **TypeScript Production Build** | `npm run build` | **0 errors / Clean build** | 0 | 1.37s |
 | **On-Chain Mismatch Reproducer** | `npx tsx scripts/verify-mismatch-onchain.ts` | **PASS (Match=true, Mismatch=false)** | 0 | 4.88s |
 
 ---

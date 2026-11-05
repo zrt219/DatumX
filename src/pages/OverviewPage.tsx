@@ -10,6 +10,7 @@ import { TrustScoreCard } from '../components/dashboard/TrustScoreCard'
 import { ValidationSummaryCard } from '../components/dashboard/ValidationSummaryCard'
 import { VersionComparisonPanel } from '../components/dashboard/VersionComparisonPanel'
 import type { DatasetRecord, ProjectComparison, ProjectRecord, TimelineEvent, WalletState, WorkflowPosture } from '../types'
+import { BOTCHAIN_MAINNET_CONFIG, BOTCHAIN_PILOT_CONFIG } from '../lib/botchainConfig'
 
 interface OverviewPageProps {
   project: ProjectRecord
@@ -40,6 +41,8 @@ export function OverviewPage({
   getExplorerTxUrl,
   onNavigateToBotChain,
 }: OverviewPageProps) {
+  const mainnetContractAddress = BOTCHAIN_MAINNET_CONFIG.registryAddress || BOTCHAIN_PILOT_CONFIG.mainnetRegistryAddress
+
   return (
     <div className="space-y-5">
       <HeroStrip
@@ -99,16 +102,33 @@ export function OverviewPage({
               <span className="text-slate-600">•</span>
               <span className="font-mono text-slate-400">
                 Contract:{' '}
-                <span className="text-amber-300">Pending Broadcast Authorization</span> (Deterministic:{' '}
-                <a
-                  href="https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
-                >
-                  0xEe55...E9B7
-                </a>
-                )
+                {mainnetContractAddress ? (
+                  <>
+                    <span className="text-emerald-400 font-semibold">Verified on Mainnet</span> (
+                    <a
+                      href={`https://scan.botchain.ai/address/${mainnetContractAddress}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                    >
+                      {mainnetContractAddress.slice(0, 6)}...{mainnetContractAddress.slice(-4)}
+                    </a>
+                    )
+                  </>
+                ) : (
+                  <>
+                    <span className="text-amber-300">Pending Broadcast Authorization</span> (Deterministic:{' '}
+                    <a
+                      href="https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-sky-400 hover:text-sky-300 hover:underline"
+                    >
+                      0xEe55...E9B7
+                    </a>
+                    )
+                  </>
+                )}
               </span>
             </div>
           </div>
