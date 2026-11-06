@@ -17,6 +17,7 @@
       "owner": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
       "publicRegistrationEnabled": false,
       "authorizedSubmittersPattern": "OWNER_MANAGED_ALLOWLIST",
+      "blockscoutSourceVerification": "PENDING",
       "deployedAt": "2026-11-05T22:06:56Z"
     }
   },

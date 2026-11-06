@@ -58,8 +58,9 @@ if (!authorized) {
     revert DeploymentNotAuthorized();
 }
 
-// Layer 3: Mandatory Signing Key Assertion
-uint256 deployerPrivateKey = vm.envOr("BOTCHAIN_MAINNET_PRIVATE_KEY", uint256(0));
+// Layer 3: Mandatory Signing Key Assertion (Normalized Single-Path String-First Parsing)
+string memory rawKey = vm.envOr("BOTCHAIN_MAINNET_PRIVATE_KEY", string(""));
+uint256 deployerPrivateKey = bytes(rawKey).length == 64 ? vm.parseUint(string.concat("0x", rawKey)) : (bytes(rawKey).length > 0 ? vm.parseUint(rawKey) : 0);
 if (deployerPrivateKey == 0) {
     revert MissingDeployerKey();
 }

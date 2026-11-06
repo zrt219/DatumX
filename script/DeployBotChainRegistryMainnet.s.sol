@@ -20,12 +20,12 @@ contract DeployBotChainRegistryMainnet is Script {
     function run() external returns (address registryAddress) {
         uint256 chainId = block.chainid;
         bool isAuthorized = vm.envOr("BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED", false);
-        uint256 deployerPrivateKey = vm.envOr("BOTCHAIN_MAINNET_PRIVATE_KEY", uint256(0));
-        if (deployerPrivateKey == 0) {
-            string memory rawKey = vm.envOr("BOTCHAIN_MAINNET_PRIVATE_KEY", string(""));
+        string memory rawKey = vm.envOr("BOTCHAIN_MAINNET_PRIVATE_KEY", string(""));
+        uint256 deployerPrivateKey = 0;
+        if (bytes(rawKey).length > 0) {
             if (bytes(rawKey).length == 64) {
                 deployerPrivateKey = vm.parseUint(string.concat("0x", rawKey));
-            } else if (bytes(rawKey).length > 0) {
+            } else {
                 deployerPrivateKey = vm.parseUint(rawKey);
             }
         }
