@@ -62,9 +62,9 @@ function buildWorkflowPosture(currentDataset: DatasetRecord, hasLiveDatasets: bo
     return {
       ...fallback,
       stageLabel: 'Registered',
-      heroSummary: 'Protocol registration is live on XRPL EVM Testnet. The first dataset release is still pending.',
+      heroSummary: 'Protocol registration is live on XRPL EVM. The first dataset release is still pending.',
       trustLabel: 'Ready for first submission',
-      chainStatus: 'Live on XRPL EVM Testnet',
+      chainStatus: 'Live on XRPL EVM',
       readinessLabel: 'Submission path active',
     }
   }
@@ -81,7 +81,7 @@ function buildWorkflowPosture(currentDataset: DatasetRecord, hasLiveDatasets: bo
   return {
     ...fallback,
     stageLabel: currentDataset.stage,
-    heroSummary: `Live protocol state for ${currentDataset.projectName} anchored on XRPL EVM Testnet.`,
+    heroSummary: `Live protocol state for ${currentDataset.projectName} anchored on XRPL EVM.`,
     trustLabel,
     chainStatus: currentDataset.chainAnchored ? 'Anchored on XRPL EVM' : 'Anchor pending',
     readinessLabel: currentDataset.status === 'Approved' || currentDataset.status === 'Finalized' ? 'Release path active' : 'Validation path active',

@@ -1,4 +1,4 @@
-import { Database, FileCheck2, GanttChartSquare, Scale, ScrollText, Settings, ShieldCheck } from 'lucide-react'
+import { Database, FileCheck2, GanttChartSquare, Scale, ScrollText, Settings, ShieldCheck, Cpu } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { NavKey } from '../../types'
 import { datumTagline } from '../../content/settingsContent'
@@ -23,6 +23,10 @@ const navGroups = [
     ],
   },
   {
+    label: 'Pilot Integrations',
+    items: [{ key: 'botchain', label: 'BOT Chain Mainnet', icon: Cpu }],
+  },
+  {
     label: 'System',
     items: [{ key: 'settings', label: 'Settings', icon: Settings }],
   },
@@ -34,8 +38,8 @@ const navGroups = [
 const systemStatus = [
   {
     label: 'Network',
-    value: 'XRPL EVM (Testnet)',
-    variant: 'xrpl',
+    value: 'BOT Chain Mainnet',
+    variant: 'botchain',
   },
   {
     label: 'Wallet',

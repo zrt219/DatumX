@@ -1,0 +1,35 @@
+{
+  "network": "botchain-mainnet",
+  "chainId": 677,
+  "rpcUrl": "https://rpc.botchain.ai",
+  "explorerUrl": "https://scan.botchain.ai",
+  "gasToken": "BOT",
+  "deploymentStatus": "DEPLOYED_LIVE",
+  "contracts": {
+    "BotChainDatasetRegistry": {
+      "address": "0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7",
+      "deployTxHash": "0x717bcc1a6a5eab9d02e124f43332aab89cf6393d4f6f3a0314d370d16d81630b",
+      "deployBlock": 29237813,
+      "deployBlockHash": "0xcacb816e575f008208d879e49e5b98af004aa88292e19a9f210d75102610beb6",
+      "gasUsed": 770877,
+      "effectiveGasPriceGwei": 20.0,
+      "deployer": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "owner": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "publicRegistrationEnabled": false,
+      "authorizedSubmittersPattern": "OWNER_MANAGED_ALLOWLIST",
+      "blockscoutSourceVerification": "PENDING",
+      "deployedAt": "2026-11-05T22:06:56Z"
+    }
+  },
+  "deploymentGuards": {
+    "script": "script/DeployBotChainRegistryMainnet.s.sol",
+    "requiredChainId": 677,
+    "requiredAuthorizationFlag": "BOTCHAIN_MAINNET_DEPLOY_AUTHORIZED=true",
+    "requiredPrivateKeyVar": "BOTCHAIN_MAINNET_PRIVATE_KEY",
+    "publicRegistrationDefault": false,
+    "allowlistedSubmittersOnly": true,
+    "isolationFromTestnet": true,
+    "isolationFromXRPL": true
+  },
+  "governanceNotice": "BotChainDatasetRegistry successfully deployed to BOT Chain Mainnet (Chain ID 677) at 0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7 by 0x31A826bB9D5F6087d94CDA31945C1234d061b788 under explicit human authorization."
+}

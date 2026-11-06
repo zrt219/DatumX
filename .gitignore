@@ -27,3 +27,7 @@ broadcast
 *.sw?
 
 .vercel
+
+.agents/
+test-results/
+tmp-tailwind.css

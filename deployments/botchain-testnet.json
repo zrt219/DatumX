@@ -1,0 +1,30 @@
+{
+  "network": "bohr-testnet",
+  "chainId": 968,
+  "rpcUrl": "https://rpc.bohr.life",
+  "explorerUrl": "https://scan.bohr.life",
+  "deployedAt": "2026-10-24T06:56:34.508Z",
+  "contracts": {
+    "BotChainDatasetRegistry": {
+      "address": "0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7",
+      "deployTxHash": "0x8c4ee577091395eaf227069c822ffb7f4ac2a394abfdf63e7088e3c7d03a17b4",
+      "deployBlock": 27954002,
+      "deployer": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "owner": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "publicRegistrationEnabled": true
+    }
+  },
+  "sampleRegistrations": [
+    {
+      "datasetId": "0x444154554d582d424f542d4c4956452d30303100000000000000000000000000",
+      "datasetIdString": "DATUMX-BOT-LIVE-001",
+      "datasetHash": "0x3cc7aa467119f5b57d3245de304e39f662ac9ba5fd87593df4b837678f2353f3",
+      "version": "1.0.0",
+      "metadataURI": "https://datumx.io/metadata/bot-live-001.json",
+      "txHash": "0x5684d534712112854202e64b6480af4e762607f878a00ee1a57fd6ceb735c8c7",
+      "blockNumber": 27954027,
+      "submitter": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
+      "explorerUrl": "https://scan.bohr.life/tx/0x5684d534712112854202e64b6480af4e762607f878a00ee1a57fd6ceb735c8c7"
+    }
+  ]
+}
