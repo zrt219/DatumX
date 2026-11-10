@@ -12,6 +12,7 @@ const GovernancePage = lazy(async () => ({ default: (await import('./components/
 const SettingsPage = lazy(async () => ({ default: (await import('./components/dashboard/SettingsPage')).SettingsPage }))
 const ValidationPage = lazy(async () => ({ default: (await import('./components/dashboard/ValidationPage')).ValidationPage }))
 const ValidatorsPage = lazy(async () => ({ default: (await import('./components/dashboard/ValidatorsPage')).ValidatorsPage }))
+const BotChainPilotPanel = lazy(async () => ({ default: (await import('./components/botchain/BotChainPilotPanel')).BotChainPilotPanel }))
 
 function PageFallback() {
   return <div className="rounded-[18px] bg-white/[0.025] px-5 py-4 text-sm text-slate-300">Loading console view...</div>
@@ -38,7 +39,7 @@ export default function App() {
       {!wallet.isMetaMaskAvailable ? (
         <div className="flex items-center gap-3 rounded-[18px] bg-amber/10 px-5 py-4 text-sm text-amber-100">
           <AlertTriangle size={18} />
-          MetaMask not detected. The UI remains fully explorable in mock mode, but live XRPL EVM wallet actions require a browser wallet.
+          MetaMask not detected. Read-only contract verification remains available, while live on-chain registration requires a browser wallet.
         </div>
       ) : null}
 
@@ -58,6 +59,7 @@ export default function App() {
             onConnectWallet={connectWallet}
             onEnsureNetwork={ensureNetwork}
             getExplorerTxUrl={datumx.getExplorerTxUrl}
+            onNavigateToBotChain={() => datumx.setActiveNav('botchain')}
           />
         ) : null}
 
@@ -95,6 +97,7 @@ export default function App() {
         {datumx.activeNav === 'validators' ? <ValidatorsPage validators={datumx.validatorsList} /> : null}
         {datumx.activeNav === 'audit' ? <AuditTrailPage events={datumx.timeline} getExplorerTxUrl={datumx.getExplorerTxUrl} /> : null}
         {datumx.activeNav === 'governance' ? <GovernancePage projects={datumx.projects} /> : null}
+        {datumx.activeNav === 'botchain' ? <BotChainPilotPanel wallet={wallet} onRefreshWallet={connectWallet} /> : null}
         {datumx.activeNav === 'settings' ? <SettingsPage compatibilityNotice={datumx.liveCompatibilityNotice} /> : null}
       </Suspense>
     </AppShell>

@@ -300,7 +300,7 @@ export function DatasetsPage({
         <Panel title="Inspect Dataset" eyebrow={`${selectedDataset.id} selected`}>
           {protocolMode === 'live-ready' && selectedDataset.onChainId > 0 ? (
             <div className="mb-4 rounded-[14px] bg-white/[0.02] px-4 py-3 text-sm leading-6 text-slate-300">
-              Onchain dataset selected. Downstream stages will appear here only after additional lineage datasets are submitted and finalized on XRPL EVM Testnet.
+              Onchain dataset selected. Downstream stages will appear here only after additional lineage datasets are submitted and finalized on XRPL EVM.
             </div>
           ) : null}
           <div className="grid gap-4 md:grid-cols-2">

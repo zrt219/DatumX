@@ -1,0 +1,19 @@
+{
+  "name": "DatumX x BOT Chain Pilot - Partner Synthetic Dataset W1-002",
+  "description": "Synthetic KPI 6 partner review test fixture; not authentic field or satellite telemetry.",
+  "datasetId": "BOT-SYNTH-PILOT-W1-002",
+  "version": "1.0.0",
+  "schema": "datumx-sensor-grid-v1",
+  "publisher": "0xF226C920957BD4B648EaF1A8d1f859057Ec605a4",
+  "network": {
+    "name": "BOT Chain Mainnet",
+    "chainId": 677,
+    "registryContract": "0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7"
+  },
+  "contentDigest": {
+    "algorithm": "SHA-256",
+    "serialization": "RFC-8785",
+    "hash": "0xff2a0d3d505bfff72ca8bc22636ca1fe82d109768b7c2f321b08acc2b50158f1"
+  },
+  "confidentiality": "STRICTLY_SYNTHETIC_PUBLIC_BENCHMARK"
+}

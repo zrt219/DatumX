@@ -35,6 +35,7 @@ export function AppShell({
         <Sidebar active={activeNav} onChange={onNavChange} />
         <main className="space-y-5">
           <TopNav
+            activeNav={activeNav}
             projects={projects}
             activeProjectSlug={activeProjectSlug}
             onProjectChange={onProjectChange}

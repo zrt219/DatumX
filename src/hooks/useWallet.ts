@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ensureCorrectNetwork, getEthereumProvider } from '../lib/network'
 import { XRPL_EVM_TESTNET } from '../lib/web3Config'
+import { BOTCHAIN_MAINNET, BOTCHAIN_TESTNET } from '../lib/botchainConfig'
 import type { WalletState } from '../types'
 
 const initialState: WalletState = {
@@ -11,8 +12,17 @@ const initialState: WalletState = {
 }
 
 function formatChainName(chainId?: number) {
-  if (chainId === XRPL_EVM_TESTNET.chainId) return XRPL_EVM_TESTNET.name
+  if (chainId === BOTCHAIN_MAINNET.chainId) return BOTCHAIN_MAINNET.name
+  if (chainId === XRPL_EVM_TESTNET.chainId) return 'XRPL EVM'
   return chainId ? `Chain ${chainId}` : 'Disconnected'
+}
+
+function isSupportedNetwork(chainId?: number) {
+  return (
+    chainId === XRPL_EVM_TESTNET.chainId ||
+    chainId === BOTCHAIN_MAINNET.chainId ||
+    chainId === BOTCHAIN_TESTNET.chainId
+  )
 }
 
 function formatWalletError(error: unknown, fallback: string) {
@@ -45,7 +55,7 @@ export function useWallet() {
           chainId,
           chainName: formatChainName(chainId),
           isConnected: accounts.length > 0,
-          isCorrectNetwork: chainId === XRPL_EVM_TESTNET.chainId,
+          isCorrectNetwork: isSupportedNetwork(chainId),
           isMetaMaskAvailable: true,
           isBusy: false,
         })
@@ -79,7 +89,7 @@ export function useWallet() {
         ...state,
         chainId,
         chainName: formatChainName(chainId),
-        isCorrectNetwork: chainId === XRPL_EVM_TESTNET.chainId,
+        isCorrectNetwork: isSupportedNetwork(chainId),
         error: undefined,
       }))
     }
@@ -109,7 +119,7 @@ export function useWallet() {
   const connectWallet = async () => {
     const provider = getEthereumProvider()
     if (!provider) {
-      setWallet((state) => ({ ...state, error: 'MetaMask is required for direct XRPL EVM wallet connectivity.' }))
+      setWallet((state) => ({ ...state, error: 'MetaMask is required for direct BOT Chain Mainnet wallet connectivity.' }))
       return
     }
 
@@ -123,7 +133,7 @@ export function useWallet() {
         chainId,
         chainName: formatChainName(chainId),
         isConnected: true,
-        isCorrectNetwork: chainId === XRPL_EVM_TESTNET.chainId,
+        isCorrectNetwork: chainId === BOTCHAIN_MAINNET.chainId || chainId === XRPL_EVM_TESTNET.chainId,
         isMetaMaskAvailable: true,
         isBusy: false,
       })
@@ -135,7 +145,7 @@ export function useWallet() {
   const ensureNetwork = async () => {
     const provider = getEthereumProvider()
     if (!provider) {
-      setWallet((state) => ({ ...state, error: 'MetaMask is required for XRPL EVM network switching.' }))
+      setWallet((state) => ({ ...state, error: 'MetaMask is required for network switching.' }))
       return
     }
 
@@ -148,7 +158,7 @@ export function useWallet() {
         ...state,
         chainId,
         chainName: formatChainName(chainId),
-        isCorrectNetwork: chainId === XRPL_EVM_TESTNET.chainId,
+        isCorrectNetwork: chainId === BOTCHAIN_MAINNET.chainId || chainId === XRPL_EVM_TESTNET.chainId,
         isBusy: false,
       }))
     } catch (error) {

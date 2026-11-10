@@ -74,7 +74,7 @@ export const settingsThesisPanel: SettingsThesisPanel = {
   ],
   runtimeTitle: 'Runtime posture',
   runtimeBody: [
-    'XRPL EVM testnet routing is live through MetaMask.',
+    'XRPL EVM routing is live through MetaMask.',
     'Protocol reads and writes are centralized through the deployed contract manifest.',
     'The product shell stays dark, restrained, and institutional while this page functions as a research-facing dossier.',
   ],
@@ -230,7 +230,7 @@ export const settingsSections: SettingsSection[] = [
       [
         { text: 'The strongest story is that the protocol was deployed on ' },
         { text: 'XRPL EVM', highlight: true },
-        { text: ' testnet, exercised with real ' },
+        { text: ', exercised with real ' },
         { text: 'validator quorum', highlight: true },
         { text: ', and then iterated when a chain-specific runtime issue appeared in the adapter normalization path. The fix was architectural, not cosmetic.' },
       ],
