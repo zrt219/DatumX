@@ -16,11 +16,11 @@ This master deliverables report presents direct, verifiable on-chain evidence ad
 | KPI # | Deliverable | Target Requirement | Status | Primary Evidence & Artifacts |
 | :---: | :--- | :--- | :---: | :--- |
 | **KPI 1** | **Live Public Website** | Live production deployment featuring prominent `DATUMX × BOT CHAIN MAINNET` hero banner, verified clickable links to `botchain.ai` and `scan.botchain.ai`, contract address status, and direct console entry point. | **COMPLETE** | Production URL: [`https://datumx.vercel.app`](https://datumx.vercel.app)<br>Verified Status: `Verified Live on Mainnet (Chain ID 677)`<br>All testnet strings eliminated from production UI |
-| **KPI 2** | **Live Product & Verification Console** | Full Register → Read → Verify workflow, MetaMask detection, locked to Chain ID 677, fail-closed preflights, and reproducible MATCH / MISMATCH cryptographic proofs on Mainnet. | **COMPLETE** | Programmatic Proof: `scripts/verify-mainnet-onchain.ts`<br>Mainnet Benchmark Tx: [`0xee9afc...f59`](https://scan.botchain.ai/tx/0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59)<br>Block: `29237966`<br>65/65 Vitest + 58/58 Foundry Tests PASS |
+| **KPI 2** | **Live Product & Verification Console** | Full Register → Read → Verify workflow, MetaMask detection, locked to Chain ID 677, fail-closed preflights, and reproducible MATCH / MISMATCH cryptographic proofs on Mainnet. | **COMPLETE** | Programmatic Proof: `scripts/verify-mainnet-onchain.ts`<br>Mainnet Benchmark Tx: [`0xee9afc...f59`](https://scan.botchain.ai/tx/0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59)<br>Block: `29237966`<br>122/122 Vitest + 58/58 Foundry Tests PASS |
 | **KPI 3** | **Official DatumX X Presence** | Dedicated official X branding specification (Handle `@DatumXProtocol`, bio, avatar, banner guidelines) and five (5) high-impact original educational posts. | **PENDING** | Artifact: [`docs/botchain/DATUMX_X_PRESENCE_AND_LAUNCH.md`](DATUMX_X_PRESENCE_AND_LAUNCH.md)<br>All 5 posts written and formatted; awaiting human account setup & publishing. |
 | **KPI 4** | **Official Mainnet Launch Post** | Comprehensive, publication-ready 4-part launch announcement thread detailing the live integration on BOT Chain Mainnet (Chain ID 677). | **PENDING** | Artifact: [`docs/botchain/DATUMX_X_PRESENCE_AND_LAUNCH.md`](DATUMX_X_PRESENCE_AND_LAUNCH.md)<br>Armed with verified live contract address `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`; awaiting human publishing. |
 | **KPI 5** | **Project Independence & Governance** | Project-controlled deployment wallet, owner permissions, restricted registration (`publicRegistrationEnabled = false`), authorized submitters, and full architectural separation from XRPL. | **COMPLETE** | Artifact: [`docs/botchain/PROJECT_INDEPENDENCE_AND_GOVERNANCE.md`](PROJECT_INDEPENDENCE_AND_GOVERNANCE.md)<br>Signer: `0x31A826bB9D5F6087d94CDA31945C1234d061b788`<br>Deploy Script: `DeployBotChainRegistryMainnet.s.sol` |
-| **KPI 6** | **On-Chain Evidence & Transactions** | On-chain deployment, owner allowlist verification, and 5 verified dataset registrations across 3 independent wallets. | **PARTIALLY COMPLETE** | Contract: [`0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`](https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)<br>Confirmed Registrations: **`2 / 5`** (`Owner` x2)<br>Partner Wallet 1 & Wallet 2 Allowlisted: **CONFIRMED (`true`)**; Partner Registrations: **PENDING**<br>Remaining Owner Balance: **`0.97372254 BOT`** \| Blockscout Source: **PENDING**<br>Detailed Ledger: [`docs/botchain/KPI6_MULTI_WALLET_EVIDENCE.md`](KPI6_MULTI_WALLET_EVIDENCE.md) |
+| **KPI 6** | **On-Chain Evidence & Transactions** | On-chain deployment, owner allowlist verification, and 5 verified dataset registrations across 3 independent wallets. | **PARTIALLY COMPLETE** | Contract: [`0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`](https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)<br>Confirmed Registrations: **`2 / 5`** (`Owner` x2)<br>Partner Wallet 1 & Wallet 2 Allowlisted: **CONFIRMED (`true`)**; Partner Registrations: **PENDING**<br>Remaining Owner Balance: **`0.97372254 BOT`** \| Blockscout Source: **VERIFIED**<br>Detailed Ledger: [`docs/botchain/KPI6_MULTI_WALLET_EVIDENCE.md`](KPI6_MULTI_WALLET_EVIDENCE.md) |
 
 ---
 
@@ -142,7 +142,7 @@ This master deliverables report presents direct, verifiable on-chain evidence ad
    - Gas Used: `770,877 gas` at `20.0 gwei` (`0.01541754 BOT`)
    - Contract Owner: `0x31A826bB9D5F6087d94CDA31945C1234d061b788`
    - Public Registration: `false` (restricted owner-managed allowlist policy active)
-   - Blockscout Source-Code Verification: **PENDING** (Runtime bytecode deployed and active; source-code verification on `scan.botchain.ai` pending standard-json/Sourcify upload).
+   - Blockscout Source-Code Verification: **VERIFIED** (`is_verified: true` confirmed on [`scan.botchain.ai`](https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7?tab=contract) via [`script/verify-botchain-blockscout.ps1`](../../script/verify-botchain-blockscout.ps1)).
 4. **Canonical Benchmark Dataset Registration**:
    - Dataset ID: `BOT-SYNTH-002` (bytes32: `0xcac633c1802ce94471ea68adade887139bee186336f6df5d92db29c814f95c0d`)
    - Content Hash: `0x8446f6c547e76332a84b56e14a14d31b08c848dfa1e021e64a03bfce4a6b484e`
@@ -161,7 +161,7 @@ This master deliverables report presents direct, verifiable on-chain evidence ad
 
 | Test Suite | Commands | Tests Passed | Tests Failed | Execution Time |
 | :--- | :--- | :---: | :---: | :---: |
-| **Vitest Frontend Client Suite** | `npm run test` | **65 / 65** | 0 | 5.21s |
+| **Vitest Frontend & RTL UI Suite** | `npm run test:run` | **122 / 122** | 0 | 17.85s |
 | **Foundry Smart Contract Suite** | `forge test` | **58 / 58** | 0 | 81.71ms |
 | **ESLint Static Code Quality** | `npm run lint` | **0 errors / 0 warnings** | 0 | 5.82s |
 | **TypeScript Production Build** | `npm run build` | **0 errors / Clean build** | 0 | 1.81s |

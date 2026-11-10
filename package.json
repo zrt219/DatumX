@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "test:run": "vitest run",
     "test:watch": "vitest",
     "contracts:build": "forge build",
     "contracts:test": "forge test -vvv",

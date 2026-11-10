@@ -6,8 +6,8 @@
   "schema": "datumx-sensor-grid-v1",
   "publisher": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
   "network": {
-    "name": "Bohr Testnet",
-    "chainId": 968,
+    "name": "BOT Chain Mainnet",
+    "chainId": 677,
     "registryContract": "0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7"
   },
   "contentDigest": {

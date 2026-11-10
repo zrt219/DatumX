@@ -3,6 +3,10 @@
   "chainId": 677,
   "rpcUrl": "https://rpc.botchain.ai",
   "explorerUrl": "https://scan.botchain.ai",
+  "explorer": "https://scan.botchain.ai",
+  "verified": true,
+  "verificationStatus": "Pass - Verified",
+  "verificationUrl": "https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7?tab=contract",
   "gasToken": "BOT",
   "deploymentStatus": "DEPLOYED_LIVE",
   "contracts": {
@@ -17,7 +21,11 @@
       "owner": "0x31A826bB9D5F6087d94CDA31945C1234d061b788",
       "publicRegistrationEnabled": false,
       "authorizedSubmittersPattern": "OWNER_MANAGED_ALLOWLIST",
-      "blockscoutSourceVerification": "PENDING",
+      "blockscoutSourceVerification": "VERIFIED",
+      "verified": true,
+      "verificationStatus": "Pass - Verified",
+      "verificationUrl": "https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7?tab=contract",
+      "explorer": "https://scan.botchain.ai",
       "deployedAt": "2026-11-05T22:06:56Z"
     }
   },
