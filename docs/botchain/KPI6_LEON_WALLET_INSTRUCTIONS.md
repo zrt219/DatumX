@@ -2,14 +2,22 @@
 
 **Live App:** https://datumx.vercel.app  
 **Contract (`BotChainDatasetRegistry`):** `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`  
-**Target Requirement:** 5 verified dataset registrations across 3 independent wallets before **November 13, 2026** (DatumX owner wallet already has 2 confirmed on-chain; Leon's Wallet 1 & Wallet 2 will complete independent registrations directly via MetaMask).
+**Partner Allowlist Status:** **BOTH WALLETS AUTHORIZED ON-CHAIN (`Chain ID 677`)**  
+- **Wallet 1 (`0xF226C920957BD4B648EaF1A8d1f859057Ec605a4`)**: Confirmed `true` ([Tx `0xe3f5dacd...`](https://scan.botchain.ai/tx/0xe3f5dacd8a74f802a088a523fdd3b8fab4403cc0c5c03cd5133881007eec5e20), Block `29743054`), Balance `0.03037 BOT`  
+- **Wallet 2 (`0xe75d3c3c109C06bCFb833b4a9BB7c2FE87597Af2`)**: Confirmed `true` ([Tx `0x0b0318b7...`](https://scan.botchain.ai/tx/0x0b0318b73078f68bb21cd61cc21060dfc7b6f893011135006f84fa55d72dcc64), Block `29743076`), Balance `0.03251 BOT`  
+
+*(Target: Complete **3 partner registrations** across Wallet 1 and Wallet 2 to reach **5 total registrations across 3 independent wallets** alongside DatumX Owner's 2 confirmed registrations.)*
 
 ---
 
 ## Quick Copy-Paste Telegram Guide
 
 ```text
-DatumX × BOT Chain Mainnet — Quick Registration Guide
+DatumX × BOT Chain Mainnet — Ready for Registration (Both Wallets Authorized)
+
+Both of your wallets are now verified on-chain (authorizedSubmitters = true) and funded with ~0.03 BOT for gas:
+• Wallet 1: 0xF226C920957BD4B648EaF1A8d1f859057Ec605a4 (Suggested: 2 registrations -> W1 Tx 1 & W1 Tx 2)
+• Wallet 2: 0xe75d3c3c109C06bCFb833b4a9BB7c2FE87597Af2 (Suggested: 1 registration  -> W2 Tx 1)
 
 1) MetaMask Network Settings (BOT Chain Mainnet)
 • Network Name: BOT Chain Mainnet
@@ -20,69 +28,52 @@ DatumX × BOT Chain Mainnet — Quick Registration Guide
 
 2) Connect to DatumX
 • Open https://datumx.vercel.app
-• Select the active wallet in MetaMask:
-  - Wallet 1: 0xF226C920957BD4B648EaF1A8d1f859057Ec605a4
-  - Wallet 2: 0xe75d3c3c109C06bCFb833b4a9BB7c2FE87597Af2
-• Click "Connect Wallet" in the top-right bar and approve in MetaMask.
-• Click "Open BOT Chain Console" on the homepage (or "BOT Chain Mainnet" in the left menu).
+• Select Wallet 1 (0xF226...05a4) in MetaMask, click "Connect Wallet", and approve.
+• Click "Open BOT Chain Console" (or "BOT Chain Mainnet" in the sidebar).
 • If prompted, click "Switch to BOT Chain Mainnet (677)" and approve in MetaMask.
-• Confirm the status bar says:
-  "LIVE ON-CHAIN READY" and "Wallet Role: Authorized Submitter (Registration Enabled)"
-  (Note: Once DatumX owner approves your address on-chain, this badge updates automatically.)
+• Confirm the blue status box says:
+  "LIVE ON-CHAIN READY" and "Wallet Role: Authorized Submitter (Registration Enabled)".
 
-3) Register a Unique Synthetic Dataset (Step 1)
-• Dataset Identifier: MUST be brand-new and unique for every transaction!
-  - Use the "New Unique ID" button, OR type your own like:
-    - Wallet 1 Tx #1: BOT-REVIEW-W1-001
-    - Wallet 1 Tx #2: BOT-REVIEW-W1-002
-    - Wallet 2 Tx #1: BOT-REVIEW-W2-001
-    - Wallet 2 Tx #2: BOT-REVIEW-W2-002
-  (Never reuse BOT-SYNTH-002 — duplicate IDs are rejected by the smart contract.)
-• Version: 1.0.0
-• Public Metadata URI: keep default or use a synthetic URI like https://datumx.vercel.app/metadata/review-001.json
-• Synthetic Payload (JSON): optionally tweak a number (like gammaCount: 188.4) so each dataset has a unique payload hash.
-• Click "Canonicalize & Hash" -> confirms valid JSON and shows the SHA-256 hash.
-• Click "Submit On-Chain" -> review gas in BOT and click Confirm in MetaMask.
-• Wait ~2–5 seconds for confirmation.
+3) Load Prepared Synthetic Preset & Preview Fee (Step 1)
+We pre-tested 3 unique synthetic fixtures (1-click buttons inside Step 1):
+• With Wallet 1 connected:
+  - First registration: click preset "W1 Tx 1" (loads BOT-SYNTH-PILOT-W1-001)
+  - Second registration: click preset "W1 Tx 2" (loads BOT-SYNTH-PILOT-W1-002)
+• Then switch MetaMask to Wallet 2 (0xe75d...7Af2):
+  - Third registration: click preset "W2 Tx 1" (loads BOT-SYNTH-PILOT-W2-001)
+• (Or click "New Unique ID" if entering your own synthetic dataset ID.)
+• Click "Simulate & Preview Fee" -> verifies uniqueness on-chain and shows the exact contract, wallet, hashes, and ~0.0044 BOT gas estimate.
+• Click "Confirm & Sign in MetaMask" and approve the MetaMask popup.
 
 4) Copy Your BOTScan Transaction URL (Step 2)
 • Step 2 ("2. Read Stored Record") will automatically load your confirmed on-chain record from RPC.
-• Click the "Copy URL" button next to "Transaction:" (or click the link to open scan.botchain.ai/tx/0x...).
-• Save that full BOTScan transaction URL!
+• Click "Copy URL" beside "Transaction:" (https://scan.botchain.ai/tx/0x...).
 
 5) Verify Data Integrity (Step 3)
-• Confirm Step 3 shows your submitted JSON payload, then click "Verify On-Chain (verifyDatasetHash)".
-• You should see green: MATCH [ON-CHAIN SMART CONTRACT VERIFIED].
-• (Optional tamper check) Click "Simulate Tampered Reading" -> "Verify On-Chain (verifyDatasetHash)" -> it turns red: MISMATCH [PAYLOAD ALTERED].
+• Click "Verify On-Chain (verifyDatasetHash)" -> confirm green:
+  MATCH [ON-CHAIN SMART CONTRACT VERIFIED].
+• Optional tamper test: click "Simulate Tampered Reading" -> "Verify On-Chain" -> turns red:
+  MISMATCH [PAYLOAD ALTERED].
 
-6) What to Send Back to DatumX
-For each registration transaction, please reply with:
+6) Reply With:
+For each of the 3 registrations, please send:
 1. Wallet address used
-2. Dataset Identifier string (e.g. BOT-REVIEW-W1-001)
+2. Dataset Identifier (e.g. BOT-SYNTH-PILOT-W1-001)
 3. Full BOTScan transaction URL (https://scan.botchain.ai/tx/0x...)
-4. Screenshot of Step 2 ("CONFIRMED ON-CHAIN (RPC READBACK)") & Step 3 ("MATCH") if available
+4. Screenshot of Step 2 ("CONFIRMED ON-CHAIN") & Step 3 ("MATCH") if handy
 ```
 
 ---
 
-## Official BOT Chain Mainnet Parameters
+## Pre-Verified Synthetic Presets (Live RPC Simulation Tested)
 
-| Parameter | Value |
-| :--- | :--- |
-| **Network Name** | BOT Chain Mainnet |
-| **RPC URL** | `https://rpc.botchain.ai` |
-| **Chain ID** | `677` (`0x2a5`) |
-| **Currency Symbol** | `BOT` |
-| **Block Explorer URL** | `https://scan.botchain.ai` |
-| **Registry Contract Address** | `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7` |
+*(All three fixtures are strictly synthetic test data for protocol review, never real satellite observations or authentic field measurements.)*
 
----
-
-## Authorized Partner Wallets & Recommended Distribution
-
-- **Wallet 1 (`0xF226C920957BD4B648EaF1A8d1f859057Ec605a4`)**: Pre-funded (`0.03037 BOT`), suggest 2 unique registrations (e.g., `BOT-REVIEW-W1-001`, `BOT-REVIEW-W1-002`).
-- **Wallet 2 (`0xe75d3c3c109C06bCFb833b4a9BB7c2FE87597Af2`)**: Pre-funded (`0.03251 BOT`), suggest 1–2 unique registrations (e.g., `BOT-REVIEW-W2-001`, `BOT-REVIEW-W2-002`).
-- **DatumX Owner Wallet (`0x31A826bB9D5F6087d94CDA31945C1234d061b788`)**: Already holds 2 verified registrations on-chain, bringing the combined total to **5+ genuine `registerDataset` transactions across 3 independent wallets**.
+| Preset Button | Assigned Wallet | Dataset Identifier | Computed `bytes32` ID | Canonical SHA-256 Hash | Simulated Gas (`20 gwei`) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`W1 Tx 1`** | Wallet 1 (`0xF226...05a4`) | `BOT-SYNTH-PILOT-W1-001` | `0xa560973520c0548ad1ca86c3cabc3b4e94f730ba00ceadaa534e75eb745f19ff` | `0xea0dcdd1105a83a9ffb80af7c14c5311baa8c6398cc82c52b44543a1ffb48df5` | `220,497` (`~0.00441 BOT`) |
+| **`W1 Tx 2`** | Wallet 1 (`0xF226...05a4`) | `BOT-SYNTH-PILOT-W1-002` | `0xe02c93248d410d67c1761f4341fe5c4b6a6f019dac43a00cb49099c8d406c274` | `0xff2a0d3d505bfff72ca8bc22636ca1fe82d109768b7c2f321b08acc2b50158f1` | `220,509` (`~0.00441 BOT`) |
+| **`W2 Tx 1`** | Wallet 2 (`0xe75d...7Af2`) | `BOT-SYNTH-PILOT-W2-001` | `0xfd7fdbbe38427ae2bdf84ec322c83cd5870bcf1fa8fee95d36e7867427a3049f` | `0xeb0fa956cb31251a458783b95d73d5a45124f600032eccebbaa4ca27c045439d` | `220,497` (`~0.00441 BOT`) |
 
 ---
 
@@ -90,8 +81,8 @@ For each registration transaction, please reply with:
 
 | Error Message | Cause | Fix |
 | :--- | :--- | :--- |
-| `Dataset ID "..." is already registered on-chain` | Someone already registered that ID (e.g., `BOT-SYNTH-002`). | Click **New Unique ID** or enter a fresh string (e.g. `BOT-REVIEW-W1-001`). |
-| `Submitting wallet ... lacks permission to register datasets` | Your address has not been allowlisted by the owner yet, or the wrong MetaMask account is active. | Make sure you selected Wallet 1 or Wallet 2 in MetaMask and confirm allowlist status in the **Owner Allowlist** tab says `AUTHORIZED ON MAINNET`. |
-| `Incorrect network: Connected wallet is on chain ID ...` | MetaMask is on Ethereum, XRPL, or Bohr Testnet instead of BOT Chain Mainnet. | Click **Switch to BOT Chain Mainnet (677)** and approve the network switch in MetaMask. |
-| `Insufficient gas funds on BOT Chain Mainnet` | Wallet holds under `0.0005 BOT`. | Check you selected the funded Wallet 1 / Wallet 2 account (`~0.03 BOT` each). |
-| `Invalid JSON syntax in raw dataset payload` | Missing comma or quote after editing the JSON box. | Verify valid JSON formatting (all keys double-quoted, no trailing commas) and click **Canonicalize & Hash**. |
+| `Duplicate dataset ID: ... is already registered on BOT Chain Mainnet` | That Dataset ID already exists on-chain (`BOT-SYNTH-002` or reused preset). | Select a different unused preset (`W1 Tx 2`, `W2 Tx 1`) or click **New Unique ID**. |
+| `Submitting wallet ... lacks permission to register datasets` | Active MetaMask account is neither Owner nor Wallet 1 / Wallet 2. | Switch active MetaMask account to `0xF226...05a4` or `0xe75d...7Af2`. |
+| `Incorrect network: Connected wallet is on chain ID ...` | MetaMask is not on BOT Chain Mainnet (`677`). | Click **Switch to BOT Chain Mainnet (677)** and approve in MetaMask. |
+| `Insufficient BOT balance for estimated transaction fee` | Account lacks `~0.0044 BOT`. | Verify you are on the pre-funded Wallet 1 (`0.03037 BOT`) or Wallet 2 (`0.03251 BOT`). |
+| `Contract simulation failed for registerDataset` | Empty version, malformed input, duplicate ID, or unauthorized caller. | Verify `Version` is non-empty (`1.0.0`) and Dataset ID is unique, then click **Simulate & Preview Fee**. |

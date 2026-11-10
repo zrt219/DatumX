@@ -9,16 +9,18 @@ import {
   readBotchainDataset,
   verifyBotchainDatasetHash,
   submitBotchainDataset,
-  validateRegistrationPrerequisites,
+  prepareRegisterBotchainDataset,
   fetchAllBotchainDatasets,
   checkSubmitterPermissions,
   prepareSetAuthorizedSubmitter,
   executeSetAuthorizedSubmitter,
   type RegistryLiveCheckResult,
   type SubmitterPermissionStatus,
+  type PreparedDatasetRegistration,
   type PreparedSubmitterAuthorization,
   type ExecutedSubmitterAuthorization,
 } from '../../lib/botchainClient'
+import { KPI6_PARTNER_SYNTHETIC_PRESETS, type PartnerSyntheticDatasetPreset } from '../../lib/botchainPartnerPresets'
 import type { WalletState } from '../../types'
 
 const LEON_WALLETS = [
@@ -98,6 +100,8 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [isPreparingAuth, setIsPreparingAuth] = useState(false)
   const [isExecutingAuth, setIsExecutingAuth] = useState(false)
   const [executedAuthResult, setExecutedAuthResult] = useState<ExecutedSubmitterAuthorization | null>(null)
+  const [preparedRegistration, setPreparedRegistration] = useState<PreparedDatasetRegistration | null>(null)
+  const [isSimulatingReg, setIsSimulatingReg] = useState(false)
   const [explorerQueryId, setExplorerQueryId] = useState('')
   const [explorerQueryResult, setExplorerQueryResult] = useState<{
     datasetId?: `0x${string}`
@@ -322,6 +326,67 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     }
   }
 
+  const handleSelectPartnerPreset = async (preset: PartnerSyntheticDatasetPreset) => {
+    const formattedJson = JSON.stringify(preset.payload, null, 2)
+    setDatasetIdInput(preset.datasetId)
+    setVersionInput(preset.version)
+    setMetadataUriInput(preset.metadataURI)
+    setRawJson(formattedJson)
+    setVerificationInput(formattedJson)
+    setPreparedRegistration(null)
+    setErrorMessage(null)
+    try {
+      const canonical = canonicalJsonStringify(preset.payload)
+      const hash = await computeSha256Hex(canonical)
+      setCalculatedHash(hash)
+      setInfoMessage(
+        `Loaded synthetic preset ${preset.datasetId} (intended signer: ${preset.assignedWalletLabel} ${preset.assignedWalletAddress.slice(0, 6)}...${preset.assignedWalletAddress.slice(-4)}).`,
+      )
+    } catch {
+      setCalculatedHash('')
+    }
+  }
+
+  const handlePrepareRegistration = async () => {
+    setErrorMessage(null)
+    setInfoMessage(null)
+    setPreparedRegistration(null)
+    setIsSimulatingReg(true)
+
+    try {
+      const parsed = JSON.parse(rawJson)
+      const canonical = canonicalJsonStringify(parsed)
+      const hash = (await computeSha256Hex(canonical)) as `0x${string}`
+      const computedId = (await computeSha256Hex(datasetIdInput)) as `0x${string}`
+      setCalculatedHash(hash)
+      setVerificationInput(rawJson)
+
+      if (!wallet.account) {
+        throw new Error(`Connect an authorized wallet on ${currentNetwork.name} (Chain ID ${currentNetwork.chainId}) to simulate registration.`)
+      }
+
+      const prep = await prepareRegisterBotchainDataset({
+        account: wallet.account,
+        datasetId: computedId,
+        datasetHash: hash,
+        version: versionInput,
+        metadataURI: metadataUriInput,
+        walletChainId: wallet.chainId,
+        targetChainId: selectedChainId,
+      })
+
+      setPreparedRegistration(prep)
+      setInfoMessage(
+        `Simulation passed for "${datasetIdInput}". Estimated fee: ${prep.estimatedCostBot} BOT (${String(prep.gasEstimate)} gas). Ready for your explicit MetaMask confirmation.`,
+      )
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Simulation failed'
+      setErrorMessage(msg)
+    } finally {
+      setIsSimulatingReg(false)
+    }
+  }
+
   const handleComputeHash = async () => {
     setIsHashing(true)
     setErrorMessage(null)
@@ -377,24 +442,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           throw new Error(`Please connect an authorized wallet on ${currentNetwork.name} before submitting.`)
         }
 
-        // Validate all 5 prerequisites fail-closed before live submission
-        await validateRegistrationPrerequisites({
-          walletChainId: wallet.chainId,
-          account: wallet.account as `0x${string}`,
-          targetChainId: selectedChainId,
-        })
-
-        // Pre-flight check: prevent re-registering existing dataset ID
-        try {
-          const existing = await readBotchainDataset(computedId, selectedChainId)
-          if (existing.exists || (existing.datasetHash && existing.datasetHash !== '0x0000000000000000000000000000000000000000000000000000000000000000')) {
-            throw new Error(`Dataset ID "${datasetIdInput}" is already registered on-chain. Please use a new unique ID or query it in Step 2.`)
-          }
-        } catch (e: unknown) {
-          if (e instanceof Error && e.message.includes('already registered')) throw e
-        }
-
-        // Live on-chain write -> receipt -> readback -> verify pipeline
+        // Live pre-flight + duplicate check + simulateContract + write -> receipt -> readback -> verify pipeline
         const liveTx = await submitBotchainDataset({
           account: wallet.account,
           datasetId: computedId,
@@ -418,6 +466,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         // Populate directly from the independently read on-chain record
         setCalculatedHash(hash)
         setVerificationInput(rawJson)
+        setPreparedRegistration(null)
         setStoredRecord({
           datasetId: computedId,
           datasetHash: onChainRecord.datasetHash,
@@ -784,12 +833,31 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               </div>
 
               <div className="space-y-3 text-xs">
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] p-2 space-y-1.5">
+                  <div className="text-[11px] text-slate-400">Synthetic Partner Test Presets (Non-Production Fixtures):</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {KPI6_PARTNER_SYNTHETIC_PRESETS.map((preset) => (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() => handleSelectPartnerPreset(preset)}
+                        className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[10px] font-medium text-sky-300 hover:bg-sky-500/20"
+                      >
+                        {preset.buttonLabel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="text-slate-400">Dataset Identifier</label>
                     <button
                       type="button"
-                      onClick={() => setDatasetIdInput(buildUniqueDatasetId())}
+                      onClick={() => {
+                        setDatasetIdInput(buildUniqueDatasetId())
+                        setPreparedRegistration(null)
+                      }}
                       className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-300 hover:bg-sky-500/20"
                     >
                       New Unique ID
@@ -798,7 +866,10 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                   <input
                     type="text"
                     value={datasetIdInput}
-                    onChange={(e) => setDatasetIdInput(e.target.value)}
+                    onChange={(e) => {
+                      setDatasetIdInput(e.target.value)
+                      setPreparedRegistration(null)
+                    }}
                     className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
                   />
                 </div>
@@ -809,7 +880,10 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                     <input
                       type="text"
                       value={versionInput}
-                      onChange={(e) => setVersionInput(e.target.value)}
+                      onChange={(e) => {
+                        setVersionInput(e.target.value)
+                        setPreparedRegistration(null)
+                      }}
                       className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
                     />
                   </div>
@@ -818,7 +892,10 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                     <input
                       type="text"
                       value={metadataUriInput}
-                      onChange={(e) => setMetadataUriInput(e.target.value)}
+                      onChange={(e) => {
+                        setMetadataUriInput(e.target.value)
+                        setPreparedRegistration(null)
+                      }}
                       className="mt-1 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-[#38bdf8]"
                     />
                   </div>
@@ -829,25 +906,38 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                   <textarea
                     rows={6}
                     value={rawJson}
-                    onChange={(e) => setRawJson(e.target.value)}
+                    onChange={(e) => {
+                      setRawJson(e.target.value)
+                      setPreparedRegistration(null)
+                    }}
                     className="mt-1 w-full font-mono text-[11px] rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-slate-300 outline-none focus:border-[#38bdf8]"
                   />
                 </div>
 
-                <div className="flex gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 pt-1">
                   <button
                     type="button"
                     onClick={handleComputeHash}
                     disabled={isHashing}
-                    className="flex-1 rounded-lg border border-white/10 bg-white/[0.05] py-2 text-slate-200 hover:bg-white/[0.08]"
+                    className="flex-1 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-2 text-slate-200 hover:bg-white/[0.08]"
                   >
                     {isHashing ? 'Computing...' : 'Canonicalize & Hash'}
                   </button>
+                  {isLiveReady ? (
+                    <button
+                      type="button"
+                      onClick={handlePrepareRegistration}
+                      disabled={isSimulatingReg || isSubmitting}
+                      className="flex-1 rounded-lg border border-sky-500/30 bg-sky-500/15 px-2.5 py-2 font-medium text-sky-200 hover:bg-sky-500/25 disabled:opacity-50"
+                    >
+                      {isSimulatingReg ? 'Simulating...' : 'Simulate & Preview Fee'}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleRegisterRecord}
                     disabled={isSubmitting}
-                    className={`flex-1 rounded-lg py-2 font-medium text-white transition ${
+                    className={`flex-1 rounded-lg px-2.5 py-2 font-medium text-white transition ${
                       isLiveReady
                         ? 'bg-[#0284c7] hover:bg-[#0369a1]'
                         : isMainnetMode
@@ -864,6 +954,32 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                       : 'Stage Local Simulation'}
                   </button>
                 </div>
+
+                {preparedRegistration ? (
+                  <div className="rounded-xl border border-sky-500/30 bg-sky-950/25 p-3 space-y-2">
+                    <div className="text-[11px] font-semibold text-sky-300">
+                      Simulation Passed — Partner MetaMask Approval Gate
+                    </div>
+                    <div className="grid gap-1 font-mono text-[10px] text-slate-300 break-all">
+                      <div>Contract: {preparedRegistration.registryAddress}</div>
+                      <div>Sender: {preparedRegistration.senderAddress}</div>
+                      <div>Function: registerDataset(bytes32,bytes32,string,string)</div>
+                      <div>datasetId: {preparedRegistration.datasetId}</div>
+                      <div>datasetHash: {preparedRegistration.datasetHash}</div>
+                      <div>
+                        Version / Gas: {preparedRegistration.version} | {String(preparedRegistration.gasEstimate)} gas (~{preparedRegistration.estimatedCostBot} BOT)
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRegisterRecord}
+                      disabled={isSubmitting}
+                      className="w-full rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Awaiting MetaMask Confirmation...' : 'Confirm & Sign in MetaMask'}
+                    </button>
+                  </div>
+                ) : null}
 
                 {calculatedHash && (
                   <div className="rounded-lg bg-black/40 p-2.5 font-mono text-[10px] text-slate-300 break-all border border-white/5">

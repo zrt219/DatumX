@@ -97,6 +97,7 @@ export function getBotchainWalletClient(chainId: number = BOTCHAIN_MAINNET.chain
 }
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
 const PLACEHOLDER_ADDRESS = '0x1234567890123456789012345678901234567890'
 
 function resolveRegistryAddress(targetChainId: number): `0x${string}` | undefined {
@@ -496,10 +497,143 @@ export interface SubmitBotchainDatasetParams {
   metadataURI: string
   walletChainId?: number
   targetChainId?: number
+  publicClient?: typeof botchainPublicClient
+}
+
+export interface PreparedDatasetRegistration {
+  registryAddress: `0x${string}`
+  senderAddress: `0x${string}`
+  datasetId: `0x${string}`
+  datasetHash: `0x${string}`
+  version: string
+  metadataURI: string
+  gasEstimate: bigint
+  gasPriceWei: bigint
+  estimatedCostWei: bigint
+  estimatedCostBot: string
 }
 
 /**
- * Submits dataset registration on BOT Chain with rigorous end-to-end verification.
+ * Validates prerequisites, checks dataset ID uniqueness, simulates registerDataset with the intended
+ * sender wallet, and estimates gas/BOT fee before requesting an explicit MetaMask signature.
+ */
+export async function prepareRegisterBotchainDataset(
+  params: SubmitBotchainDatasetParams,
+): Promise<PreparedDatasetRegistration> {
+  if (!params.datasetId || params.datasetId.toLowerCase() === ZERO_BYTES32) {
+    throw new Error('Dataset identifier bytes32 hash cannot be empty or zero.')
+  }
+  if (!params.datasetHash || params.datasetHash.toLowerCase() === ZERO_BYTES32) {
+    throw new Error('Dataset content SHA-256 hash cannot be empty or zero.')
+  }
+  if (!params.version || !params.version.trim()) {
+    throw new Error('Dataset version string is required.')
+  }
+
+  const targetChainId =
+    params.targetChainId ??
+    (params.walletChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
+  const network = targetChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+  const client =
+    params.publicClient ||
+    (targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
+
+  await validateRegistrationPrerequisites({
+    walletChainId: params.walletChainId,
+    account: params.account,
+    targetChainId,
+    publicClient: client,
+  })
+
+  const address = resolveRegistryAddress(targetChainId)
+  if (!isUsableRegistryAddress(address)) {
+    throw new Error(`No verified ${network.name} registry contract address configured.`)
+  }
+
+  const checksummedSender = getAddress(params.account)
+
+  // Check duplicate dataset ID on-chain via direct O(1) getDataset read
+  let duplicateFound = false
+  try {
+    const existing = await client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'getDataset',
+      args: [params.datasetId],
+    })
+    if (
+      existing &&
+      typeof existing === 'object' &&
+      'exists' in existing &&
+      Boolean(existing.exists) &&
+      existing.datasetHash &&
+      existing.datasetHash.toLowerCase() !== ZERO_BYTES32
+    ) {
+      duplicateFound = true
+    }
+  } catch {
+    // Expected revert (RecordNotFound / 0x3e07f1a1) when datasetId is unused
+  }
+
+  if (duplicateFound) {
+    throw new Error(
+      `Duplicate dataset ID: ${params.datasetId} is already registered on ${network.name}. Choose a new unique Dataset Identifier.`,
+    )
+  }
+
+  // Simulate registerDataset with intended sender address
+  if (typeof client.simulateContract === 'function') {
+    try {
+      await client.simulateContract({
+        account: checksummedSender,
+        address,
+        abi: botChainRegistryAbi,
+        functionName: 'registerDataset',
+        args: [params.datasetId, params.datasetHash, params.version, params.metadataURI],
+      })
+    } catch (err: unknown) {
+      const detail = err instanceof Error ? err.message : String(err)
+      throw new Error(`Contract simulation failed for registerDataset: ${detail}`)
+    }
+  }
+
+  const gasEstimate =
+    typeof client.estimateContractGas === 'function'
+      ? await client.estimateContractGas({
+          account: checksummedSender,
+          address,
+          abi: botChainRegistryAbi,
+          functionName: 'registerDataset',
+          args: [params.datasetId, params.datasetHash, params.version, params.metadataURI],
+        })
+      : 225_000n
+
+  const gasPriceWei = typeof client.getGasPrice === 'function' ? await client.getGasPrice() : 20_000_000_000n
+  const estimatedCostWei = gasEstimate * gasPriceWei
+  const balance = await client.getBalance({ address: checksummedSender }).catch(() => 0n)
+
+  if (balance < estimatedCostWei) {
+    throw new Error(
+      `Insufficient BOT balance for estimated transaction fee: wallet has ${formatEther(balance)} BOT, requires ~${formatEther(estimatedCostWei)} BOT.`,
+    )
+  }
+
+  return {
+    registryAddress: address,
+    senderAddress: checksummedSender,
+    datasetId: params.datasetId,
+    datasetHash: params.datasetHash,
+    version: params.version,
+    metadataURI: params.metadataURI,
+    gasEstimate,
+    gasPriceWei,
+    estimatedCostWei,
+    estimatedCostBot: formatEther(estimatedCostWei),
+  }
+}
+
+/**
+ * Submits dataset registration on BOT Chain with rigorous pre-flight simulation and receipt verification.
  */
 export async function submitBotchainDataset(
   params: SubmitBotchainDatasetParams,
@@ -507,12 +641,12 @@ export async function submitBotchainDataset(
   const targetChainId = params.targetChainId ?? (params.walletChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET.chainId : BOTCHAIN_TESTNET.chainId)
   const network = targetChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
   const chain = targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetChain : botchainTestnetChain
-  const client = targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient
+  const client =
+    params.publicClient ||
+    (targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
 
-  // Validate all 5 prerequisites fail-closed before broadcasting
-  await validateRegistrationPrerequisites({
-    walletChainId: params.walletChainId,
-    account: params.account,
+  const prepared = await prepareRegisterBotchainDataset({
+    ...params,
     targetChainId,
     publicClient: client,
   })
@@ -536,19 +670,11 @@ export async function submitBotchainDataset(
     throw new Error('Wallet account mismatch: Connected account does not match requested signer.')
   }
 
-  const address = targetChainId === BOTCHAIN_MAINNET.chainId
-    ? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress || config.BOTCHAIN_PILOT_CONFIG?.mainnetRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(677))
-    : (config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress || config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(968))
-
-  if (!address) {
-    throw new Error('Registry address not configured.')
-  }
-
   // Submit on-chain transaction
   const txHash = await walletClient.writeContract({
     chain,
-    account: params.account,
-    address,
+    account: prepared.senderAddress,
+    address: prepared.registryAddress,
     abi: botChainRegistryAbi,
     functionName: 'registerDataset',
     args: [params.datasetId, params.datasetHash, params.version, params.metadataURI],

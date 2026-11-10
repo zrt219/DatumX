@@ -74,6 +74,7 @@ import {
   readBotchainDataset,
   verifyBotchainDatasetHash,
   submitBotchainDataset,
+  prepareRegisterBotchainDataset,
   validateRegistrationPrerequisites,
   checkSubmitterPermissions,
   prepareSetAuthorizedSubmitter,
@@ -101,6 +102,9 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
     mocks.waitForTransactionReceipt.mockResolvedValue({ status: 'success', transactionHash: TX })
     mocks.readContract.mockResolvedValue(true)
     mocks.getBalance.mockResolvedValue(10_000_000_000_000_000n)
+    mocks.simulateContract.mockResolvedValue({ request: {} })
+    mocks.estimateContractGas.mockResolvedValue(220_500n)
+    mocks.getGasPrice.mockResolvedValue(20_000_000_000n)
   })
 
   it('waits for an actual successful receipt before returning a transaction hash', async () => {
@@ -355,6 +359,57 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
           targetChainId: 968,
         }),
       ).rejects.toThrow(/failed or reverted/i)
+    })
+  })
+
+  describe('prepareRegisterBotchainDataset — duplicate, simulation & fee checks', () => {
+    it('rejects duplicate dataset IDs before MetaMask signature', async () => {
+      mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'getDataset') {
+          return {
+            datasetId: args.datasetId,
+            datasetHash: args.datasetHash,
+            version: '1.0.0',
+            metadataURI: args.metadataURI,
+            submitter: ACCOUNT,
+            timestamp: 1794000000n,
+            exists: true,
+          }
+        }
+        return true
+      })
+
+      await expect(prepareRegisterBotchainDataset({ ...args, walletChainId: 968, targetChainId: 968 })).rejects.toThrow(
+        /Duplicate dataset ID/i,
+      )
+      expect(mocks.simulateContract).not.toHaveBeenCalled()
+    })
+
+    it('fails closed if registerDataset contract simulation reverts', async () => {
+      mocks.simulateContract.mockRejectedValue(new Error('Execution reverted: Unauthorized'))
+
+      await expect(prepareRegisterBotchainDataset({ ...args, walletChainId: 968, targetChainId: 968 })).rejects.toThrow(
+        /Contract simulation failed/i,
+      )
+      expect(mocks.writeContract).not.toHaveBeenCalled()
+    })
+
+    it('rejects when wallet balance is below simulated transaction gas fee', async () => {
+      mocks.getBalance.mockResolvedValue(600_000_000_000_000n) // 0.0006 BOT > minRequiredGasWei
+      mocks.estimateContractGas.mockResolvedValue(225_000n)
+      mocks.getGasPrice.mockResolvedValue(20_000_000_000n) // cost = 0.0045 BOT
+
+      await expect(prepareRegisterBotchainDataset({ ...args, walletChainId: 968, targetChainId: 968 })).rejects.toThrow(
+        /Insufficient BOT balance for estimated transaction fee/i,
+      )
+    })
+
+    it('returns full fee estimate and contract call preview when simulation succeeds', async () => {
+      const prepared = await prepareRegisterBotchainDataset({ ...args, walletChainId: 968, targetChainId: 968 })
+      expect(prepared.senderAddress).toBe(ACCOUNT)
+      expect(prepared.gasEstimate).toBe(220_500n)
+      expect(prepared.estimatedCostWei).toBe(220_500n * 20_000_000_000n)
+      expect(prepared.estimatedCostBot).toBe('0.00441')
     })
   })
 })

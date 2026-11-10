@@ -6,12 +6,15 @@ import {
   checkBotchainRegistryLiveStatus,
   validateRegistrationPrerequisites,
   submitBotchainDataset,
+  prepareRegisterBotchainDataset,
   readBotchainDataset,
   verifyBotchainDatasetHash,
   checkSubmitterPermissions,
   botchainPublicClient,
   botchainMainnetPublicClient,
 } from '../lib/botchainClient'
+import { KPI6_PARTNER_SYNTHETIC_PRESETS } from '../lib/botchainPartnerPresets'
+import { canonicalJsonStringify, computeSha256Hex } from '../lib/canonicalHash'
 import { setBotchainRegistryAddress, setBotchainMainnetRegistryAddress, BOTCHAIN_TESTNET, BOTCHAIN_MAINNET } from '../lib/botchainConfig'
 
 interface EthereumProviderWindow {
@@ -270,7 +273,10 @@ describe('BotChain integration and security pre-flight checks', () => {
       vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(968)
       vi.spyOn(botchainPublicClient, 'getBytecode').mockResolvedValue('0x6080')
       vi.spyOn(botchainPublicClient, 'readContract').mockResolvedValue(true as never)
-      vi.spyOn(botchainPublicClient, 'getBalance').mockResolvedValue(1_000_000_000_000_000n)
+      vi.spyOn(botchainPublicClient, 'getBalance').mockResolvedValue(10_000_000_000_000_000n)
+      vi.spyOn(botchainPublicClient, 'simulateContract').mockResolvedValue({ request: {} } as never)
+      vi.spyOn(botchainPublicClient, 'estimateContractGas').mockResolvedValue(220_000n)
+      vi.spyOn(botchainPublicClient, 'getGasPrice').mockResolvedValue(20_000_000_000n)
 
       const mockTxHash = '0xaaaabbbbccccddddeeeeffff0000111122223333444455556666777788889999' as `0x${string}`
       setupMockProvider(mockTxHash)
@@ -296,12 +302,16 @@ describe('BotChain integration and security pre-flight checks', () => {
     it('completes end-to-end receipt wait, status check, RPC readback, and cryptographic verification on success', async () => {
       setBotchainRegistryAddress(dummyContractAddress)
 
+      let isRegisteredOnChain = false
       vi.spyOn(botchainPublicClient, 'getChainId').mockResolvedValue(968)
       vi.spyOn(botchainPublicClient, 'getBytecode').mockResolvedValue('0x6080')
       vi.spyOn(botchainPublicClient, 'readContract').mockImplementation(async (args: unknown) => {
         const callArgs = args as { functionName: string }
         if (callArgs.functionName === 'publicRegistrationEnabled') return true as never
         if (callArgs.functionName === 'getDataset') {
+          if (!isRegisteredOnChain) {
+            throw new Error('RecordNotFound')
+          }
           return {
             datasetId: dummyDatasetId,
             datasetHash: dummyDatasetHash, // EXACT MATCH
@@ -314,10 +324,24 @@ describe('BotChain integration and security pre-flight checks', () => {
         }
         return true as never
       })
-      vi.spyOn(botchainPublicClient, 'getBalance').mockResolvedValue(1_000_000_000_000_000n)
+      vi.spyOn(botchainPublicClient, 'getBalance').mockResolvedValue(10_000_000_000_000_000n)
+      vi.spyOn(botchainPublicClient, 'simulateContract').mockResolvedValue({ request: {} } as never)
+      vi.spyOn(botchainPublicClient, 'estimateContractGas').mockResolvedValue(220_000n)
+      vi.spyOn(botchainPublicClient, 'getGasPrice').mockResolvedValue(20_000_000_000n)
 
       const mockTxHash = '0xfeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface' as `0x${string}`
-      setupMockProvider(mockTxHash)
+      const mockRequest = vi.fn().mockImplementation(async ({ method }: { method: string }) => {
+        if (method === 'eth_chainId') return '0x3c8'
+        if (method === 'eth_accounts') return [validAccount]
+        if (method === 'eth_sendTransaction') {
+          isRegisteredOnChain = true
+          return mockTxHash
+        }
+        if (method === 'eth_estimateGas') return '0x493e0'
+        return null
+      })
+      const win = window as unknown as EthereumProviderWindow
+      win.ethereum = { request: mockRequest }
 
       vi.spyOn(botchainPublicClient, 'waitForTransactionReceipt').mockResolvedValue({
         status: 'success',
@@ -470,6 +494,44 @@ describe('BotChain integration and security pre-flight checks', () => {
 
       expect(await verifyBotchainDatasetHash(dummyDatasetId, dummyDatasetHash, 677)).toBe(true)
       expect(await verifyBotchainDatasetHash(dummyDatasetId, tamperedHash, 677)).toBe(false)
+    })
+
+    it('simulates KPI 6 synthetic presets for Wallet 1 on Chain ID 677 with deterministic SHA-256 hashes', async () => {
+      const preset = KPI6_PARTNER_SYNTHETIC_PRESETS[0]
+      const datasetIdHex = (await computeSha256Hex(preset.datasetId)) as `0x${string}`
+      const datasetHashHex = (await computeSha256Hex(canonicalJsonStringify(preset.payload))) as `0x${string}`
+      const recomputedHashHex = (await computeSha256Hex(canonicalJsonStringify(preset.payload))) as `0x${string}`
+      expect(datasetHashHex).toBe(recomputedHashHex)
+      expect(KPI6_PARTNER_SYNTHETIC_PRESETS.every((p) => p.payload.syntheticFixture === true)).toBe(true)
+
+      vi.spyOn(botchainMainnetPublicClient, 'getChainId').mockResolvedValue(677)
+      vi.spyOn(botchainMainnetPublicClient, 'getBytecode').mockResolvedValue('0x6080')
+      vi.spyOn(botchainMainnetPublicClient, 'getBalance').mockResolvedValue(30_374_540_000_000_000n)
+      vi.spyOn(botchainMainnetPublicClient, 'simulateContract').mockResolvedValue({ request: {} } as never)
+      vi.spyOn(botchainMainnetPublicClient, 'estimateContractGas').mockResolvedValue(220_497n)
+      vi.spyOn(botchainMainnetPublicClient, 'getGasPrice').mockResolvedValue(20_000_000_000n)
+      vi.spyOn(botchainMainnetPublicClient, 'readContract').mockImplementation(async (args: unknown) => {
+        const callArgs = args as { functionName: string }
+        if (callArgs.functionName === 'publicRegistrationEnabled') return false as never
+        if (callArgs.functionName === 'owner') return OWNER_WALLET as never
+        if (callArgs.functionName === 'authorizedSubmitters') return true as never
+        if (callArgs.functionName === 'getDataset') throw new Error('RecordNotFound')
+        return true as never
+      })
+
+      const prepared = await prepareRegisterBotchainDataset({
+        account: LEON_W1,
+        datasetId: datasetIdHex,
+        datasetHash: datasetHashHex,
+        version: preset.version,
+        metadataURI: preset.metadataURI,
+        walletChainId: 677,
+        targetChainId: 677,
+      })
+
+      expect(prepared.registryAddress).toBe(MAINNET_CONTRACT)
+      expect(prepared.senderAddress).toBe(LEON_W1)
+      expect(prepared.estimatedCostBot).toBe('0.00440994')
     })
   })
 })

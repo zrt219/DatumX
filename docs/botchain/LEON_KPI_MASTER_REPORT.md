@@ -20,7 +20,7 @@ This master deliverables report presents direct, verifiable on-chain evidence ad
 | **KPI 3** | **Official DatumX X Presence** | Dedicated official X branding specification (Handle `@DatumXProtocol`, bio, avatar, banner guidelines) and five (5) high-impact original educational posts. | **PENDING** | Artifact: [`docs/botchain/DATUMX_X_PRESENCE_AND_LAUNCH.md`](DATUMX_X_PRESENCE_AND_LAUNCH.md)<br>All 5 posts written and formatted; awaiting human account setup & publishing. |
 | **KPI 4** | **Official Mainnet Launch Post** | Comprehensive, publication-ready 4-part launch announcement thread detailing the live integration on BOT Chain Mainnet (Chain ID 677). | **PENDING** | Artifact: [`docs/botchain/DATUMX_X_PRESENCE_AND_LAUNCH.md`](DATUMX_X_PRESENCE_AND_LAUNCH.md)<br>Armed with verified live contract address `0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`; awaiting human publishing. |
 | **KPI 5** | **Project Independence & Governance** | Project-controlled deployment wallet, owner permissions, restricted registration (`publicRegistrationEnabled = false`), authorized submitters, and full architectural separation from XRPL. | **COMPLETE** | Artifact: [`docs/botchain/PROJECT_INDEPENDENCE_AND_GOVERNANCE.md`](PROJECT_INDEPENDENCE_AND_GOVERNANCE.md)<br>Signer: `0x31A826bB9D5F6087d94CDA31945C1234d061b788`<br>Deploy Script: `DeployBotChainRegistryMainnet.s.sol` |
-| **KPI 6** | **On-Chain Evidence & Transactions** | On-chain deployment wallet funding, verified balance, contract deployment transaction, canonical dataset registration, and cryptographic proof verification. | **COMPLETE** | Contract: [`0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`](https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)<br>Deploy Tx: [`0x717bcc...30b`](https://scan.botchain.ai/tx/0x717bcc1a6a5eab9d02e124f43332aab89cf6393d4f6f3a0314d370d16d81630b) (Block `29237813`)<br>Remaining Balance: **`0.975628 BOT`**<br>Blockscout Source Verification: **PENDING** |
+| **KPI 6** | **On-Chain Evidence & Transactions** | On-chain deployment, owner allowlist verification, and 5 verified dataset registrations across 3 independent wallets. | **PARTIALLY COMPLETE** | Contract: [`0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7`](https://scan.botchain.ai/address/0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7)<br>Confirmed Registrations: **`2 / 5`** (`Owner` x2)<br>Partner Wallet 1 & Wallet 2 Allowlisted: **CONFIRMED (`true`)**; Partner Registrations: **PENDING**<br>Remaining Owner Balance: **`0.97372254 BOT`** \| Blockscout Source: **PENDING**<br>Detailed Ledger: [`docs/botchain/KPI6_MULTI_WALLET_EVIDENCE.md`](KPI6_MULTI_WALLET_EVIDENCE.md) |
 
 ---
 
@@ -149,9 +149,11 @@ This master deliverables report presents direct, verifiable on-chain evidence ad
    - Registration Tx Hash: [`0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59`](https://scan.botchain.ai/tx/0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59)
    - Inclusion Block: `29237966` (`0x1be22ce`)
    - Gas Used: `232,421 gas` at `20.0 gwei` (`0.00464842 BOT`)
-5. **Signer Gas Accounting**:
-   - Total Gas Spent: `0.02006596 BOT`
-   - Remaining Wallet Balance: **`0.975628 BOT`** (Confirmed via live RPC; funds >350 future dataset registrations)
+4. **Multi-Wallet Allowlist & Gas Accounting (`KPI6_MULTI_WALLET_EVIDENCE.md`)**:
+   - **Partner Wallet 1 (`0xF226C920957BD4B648EaF1A8d1f859057Ec605a4`)**: Authorized via [`0xe3f5dacd...`](https://scan.botchain.ai/tx/0xe3f5dacd8a74f802a088a523fdd3b8fab4403cc0c5c03cd5133881007eec5e20) (Block `29743054`, `authorizedSubmitters = true`, Balance `0.03037454 BOT`). Partner registrations: **PENDING**.
+   - **Partner Wallet 2 (`0xe75d3c3c109C06bCFb833b4a9BB7c2FE87597Af2`)**: Authorized via [`0x0b0318b7...`](https://scan.botchain.ai/tx/0x0b0318b73078f68bb21cd61cc21060dfc7b6f893011135006f84fa55d72dcc64) (Block `29743076`, `authorizedSubmitters = true`, Balance `0.03250888 BOT`). Partner registrations: **PENDING**.
+   - **Confirmed Registrations (`totalRecords() == 2`)**: Owner Rx #1 ([`0xee9afc...`](https://scan.botchain.ai/tx/0xee9afc89570a2f0f26d6e55b31da1d58de10cdb5f0ba4149453b460e4a896f59), Block `29237966`) + Owner Rx #2 ([`0xf1bcfe...`](https://scan.botchain.ai/tx/0xf1bcfe32ce3cd2865709d8eeed533ed517813d50ac3f2e316b3778625d8b559b), Block `29250068`). **3 additional partner registrations needed** across Wallet 1 & Wallet 2 to complete KPI 6.
+   - Remaining Owner Wallet Balance: **`0.97372254 BOT`** (Confirmed via live RPC)
 
 ---
 
