@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw, Code, Search, Terminal } from 'lucide-react'
+import { CheckCircle2, XCircle, Shield, Database, Cpu, Layers, AlertCircle, Info, ExternalLink, Activity, RefreshCw, Code, Search, Terminal, KeyRound, Copy, Check } from 'lucide-react'
 import { Panel } from '../shared/Panel'
 import { BOTCHAIN_MAINNET, BOTCHAIN_PILOT_CONFIG, BOTCHAIN_MAINNET_CONFIG } from '../../lib/botchainConfig'
 import { canonicalJsonStringify, computeSha256Hex } from '../../lib/canonicalHash'
@@ -11,9 +11,31 @@ import {
   submitBotchainDataset,
   validateRegistrationPrerequisites,
   fetchAllBotchainDatasets,
+  checkSubmitterPermissions,
+  prepareSetAuthorizedSubmitter,
+  executeSetAuthorizedSubmitter,
   type RegistryLiveCheckResult,
+  type SubmitterPermissionStatus,
+  type PreparedSubmitterAuthorization,
+  type ExecutedSubmitterAuthorization,
 } from '../../lib/botchainClient'
 import type { WalletState } from '../../types'
+
+const LEON_WALLETS = [
+  {
+    label: 'Leon Wallet 1',
+    address: '0xF226C920957BD4B648EaF1A8d1f859057Ec605a4' as `0x${string}`,
+  },
+  {
+    label: 'Leon Wallet 2',
+    address: '0xe75d3c3c109C06bCFb833b4a9BB7c2FE87597Af2' as `0x${string}`,
+  },
+]
+
+function buildUniqueDatasetId(): string {
+  const stamp = new Date().toISOString().replaceAll('-', '').replaceAll(':', '').replace('T', '').slice(4, 14)
+  return `BOT-REVIEW-${stamp}`
+}
 
 interface BotChainPilotPanelProps {
   wallet: WalletState
@@ -51,10 +73,11 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const isWalletOnSelectedChain = wallet.chainId === BOTCHAIN_MAINNET.chainId
 
   const [rawJson, setRawJson] = useState(JSON.stringify(defaultPayload, null, 2))
-  const [datasetIdInput, setDatasetIdInput] = useState('BOT-SYNTH-002')
+  const [datasetIdInput, setDatasetIdInput] = useState(() => buildUniqueDatasetId())
   const [versionInput, setVersionInput] = useState('1.0.0')
   const [metadataUriInput, setMetadataUriInput] = useState('https://datumx.vercel.app/metadata/bot-synth-002.json')
   const [lastCalculatedCandidateHash, setLastCalculatedCandidateHash] = useState<string>('')
+  const [copiedTxUrl, setCopiedTxUrl] = useState(false)
 
   // Hash state
   const [calculatedHash, setCalculatedHash] = useState<string>('')
@@ -65,7 +88,16 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [storedRecord, setStoredRecord] = useState<StoredPilotRecord | null>(null)
-  const [activeSubTab, setActiveSubTab] = useState<'workflow' | 'explorer'>('workflow')
+  const [activeSubTab, setActiveSubTab] = useState<'workflow' | 'explorer' | 'allowlist'>('workflow')
+
+  // Wallet permission & Owner allowlist governance state
+  const [walletPermission, setWalletPermission] = useState<SubmitterPermissionStatus | null>(null)
+  const [targetAllowlistAddress, setTargetAllowlistAddress] = useState<string>(LEON_WALLETS[0].address)
+  const [leonWalletPermissions, setLeonWalletPermissions] = useState<Record<string, SubmitterPermissionStatus | null>>({})
+  const [preparedAuth, setPreparedAuth] = useState<PreparedSubmitterAuthorization | null>(null)
+  const [isPreparingAuth, setIsPreparingAuth] = useState(false)
+  const [isExecutingAuth, setIsExecutingAuth] = useState(false)
+  const [executedAuthResult, setExecutedAuthResult] = useState<ExecutedSubmitterAuthorization | null>(null)
   const [explorerQueryId, setExplorerQueryId] = useState('')
   const [explorerQueryResult, setExplorerQueryResult] = useState<{
     datasetId?: `0x${string}`
@@ -171,13 +203,124 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
     }
   }, [isLiveReady, selectedChainId])
 
+  const refreshAllowlistStatuses = useCallback(async () => {
+    if (!isLiveReady) return
+    try {
+      const results = await Promise.all(
+        LEON_WALLETS.map(async (item) => {
+          const status = await checkSubmitterPermissions(item.address, selectedChainId).catch(() => null)
+          return [item.address, status] as const
+        }),
+      )
+      setLeonWalletPermissions(Object.fromEntries(results))
+    } catch {
+      // ignore transient RPC errors in background polling
+    }
+  }, [isLiveReady, selectedChainId])
+
   useEffect(() => {
     if (isLiveReady) {
       loadActivityStream()
+      refreshAllowlistStatuses()
     } else {
       setRecentRecords([])
+      setLeonWalletPermissions({})
     }
-  }, [isLiveReady, loadActivityStream])
+  }, [isLiveReady, loadActivityStream, refreshAllowlistStatuses])
+
+  useEffect(() => {
+    let isMounted = true
+    if (!isLiveReady || !wallet.isConnected || !wallet.account) {
+      setWalletPermission(null)
+      return
+    }
+    checkSubmitterPermissions(wallet.account, selectedChainId)
+      .then((perm) => {
+        if (isMounted) setWalletPermission(perm)
+      })
+      .catch(() => {
+        if (isMounted) setWalletPermission(null)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [isLiveReady, wallet.isConnected, wallet.account, wallet.chainId, selectedChainId])
+
+  const handlePrepareAuthorization = async (submitterOverride?: string) => {
+    const candidate = (submitterOverride ?? targetAllowlistAddress).trim()
+    setTargetAllowlistAddress(candidate)
+    setErrorMessage(null)
+    setInfoMessage(null)
+    setPreparedAuth(null)
+    setExecutedAuthResult(null)
+
+    if (!wallet.account) {
+      setErrorMessage('Connect the contract owner wallet (0x31A8...b788) in MetaMask first.')
+      return
+    }
+
+    setIsPreparingAuth(true)
+    try {
+      const prep = await prepareSetAuthorizedSubmitter({
+        ownerAccount: wallet.account,
+        submitter: candidate,
+        authorized: true,
+        walletChainId: wallet.chainId,
+        targetChainId: selectedChainId,
+      })
+      setPreparedAuth(prep)
+      if (prep.alreadyInTargetState) {
+        setInfoMessage(`Wallet ${prep.submitterAddress} is already authorized on BOT Chain Mainnet.`)
+      } else {
+        setInfoMessage(
+          `Simulation succeeded for ${prep.submitterAddress}. Estimated fee: ${prep.estimatedCostBot} BOT. Review details and confirm in MetaMask when ready.`,
+        )
+      }
+      refreshAllowlistStatuses()
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to simulate authorization transaction')
+    } finally {
+      setIsPreparingAuth(false)
+    }
+  }
+
+  const handleExecuteAuthorization = async () => {
+    if (!wallet.account || !preparedAuth || preparedAuth.alreadyInTargetState) return
+    setErrorMessage(null)
+    setInfoMessage(null)
+    setIsExecutingAuth(true)
+    try {
+      const res = await executeSetAuthorizedSubmitter({
+        ownerAccount: wallet.account,
+        submitter: preparedAuth.submitterAddress,
+        authorized: true,
+        walletChainId: wallet.chainId,
+        targetChainId: selectedChainId,
+      })
+      setExecutedAuthResult(res)
+      setPreparedAuth(null)
+      setInfoMessage(
+        `Authorized ${res.submitterAddress} on BOT Chain Mainnet! Confirmed in block ${String(res.blockNumber ?? '')}. Tx: ${res.txHash}`,
+      )
+      await refreshAllowlistStatuses()
+      await onRefreshWallet()
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Owner authorization transaction failed')
+    } finally {
+      setIsExecutingAuth(false)
+    }
+  }
+
+  const handleCopyTxUrl = async (txHash: string) => {
+    const url = getExplorerTxUrl(txHash, currentNetwork.chainId)
+    try {
+      await navigator.clipboard?.writeText(url)
+      setCopiedTxUrl(true)
+      setTimeout(() => setCopiedTxUrl(false), 2000)
+    } catch {
+      setInfoMessage(`BOTScan URL: ${url}`)
+    }
+  }
 
   const handleComputeHash = async () => {
     setIsHashing(true)
@@ -188,6 +331,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
       const canonical = canonicalJsonStringify(parsed)
       const hash = await computeSha256Hex(canonical)
       setCalculatedHash(hash)
+      setVerificationInput(rawJson)
     } catch {
       setErrorMessage('Invalid JSON syntax in raw dataset payload.')
     } finally {
@@ -272,6 +416,8 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         }
 
         // Populate directly from the independently read on-chain record
+        setCalculatedHash(hash)
+        setVerificationInput(rawJson)
         setStoredRecord({
           datasetId: computedId,
           datasetHash: onChainRecord.datasetHash,
@@ -515,6 +661,26 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                 Verified registry contract active on {currentNetwork.name} at{' '}
                 <span className="font-mono text-[#4ade80]">{registryLiveResult.address}</span>. Live transactions
                 require connected wallet on {currentNetwork.name} (Chain ID {currentNetwork.chainId}) and native BOT gas.
+                {walletPermission ? (
+                  <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold ${
+                        walletPermission.canRegister
+                          ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+                          : 'border border-amber-500/30 bg-amber-500/15 text-amber-300'
+                      }`}
+                    >
+                      {walletPermission.isOwner
+                        ? 'Wallet Role: Contract Owner (Registration & Governance Enabled)'
+                        : walletPermission.isAuthorizedSubmitter
+                        ? 'Wallet Role: Authorized Submitter (Registration Enabled)'
+                        : 'Wallet Role: Not Allowlisted (Public Registration Disabled)'}
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-300">
+                      Balance: {Number(walletPermission.balanceFormatted).toFixed(4)} BOT
+                    </span>
+                  </span>
+                ) : null}
               </span>
             ) : isMainnetMode ? (
               <span>
@@ -550,9 +716,9 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
         </div>
       )}
 
-      {/* Sub-Navigation Tabs: 3-Step Workflow vs Contract Explorer */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-2">
-        <div className="flex gap-2">
+      {/* Sub-Navigation Tabs: 3-Step Workflow vs Contract Explorer vs Owner Allowlist */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setActiveSubTab('workflow')}
@@ -576,6 +742,18 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
           >
             <Search size={14} />
             In-App Contract Explorer
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('allowlist')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+              activeSubTab === 'allowlist'
+                ? 'bg-[#38bdf8] text-slate-950 shadow-md shadow-sky-500/20'
+                : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
+            }`}
+          >
+            <KeyRound size={14} />
+            Owner Allowlist
           </button>
         </div>
 
@@ -607,7 +785,16 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
 
               <div className="space-y-3 text-xs">
                 <div>
-                  <label className="text-slate-400">Dataset Identifier</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-slate-400">Dataset Identifier</label>
+                    <button
+                      type="button"
+                      onClick={() => setDatasetIdInput(buildUniqueDatasetId())}
+                      className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-300 hover:bg-sky-500/20"
+                    >
+                      New Unique ID
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={datasetIdInput}
@@ -754,17 +941,27 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
                     </div>
 
                     {storedRecord.isLiveOnChain && storedRecord.txHash ? (
-                      <div className="rounded-lg bg-[#0d1c2e] p-2.5 border border-[#38bdf8]/20 flex items-center justify-between">
+                      <div className="rounded-lg bg-[#0d1c2e] p-2.5 border border-[#38bdf8]/20 flex items-center justify-between gap-2">
                         <span className="text-slate-400">Transaction:</span>
-                        <a
-                          href={getExplorerTxUrl(storedRecord.txHash, currentNetwork.chainId)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 font-mono text-[11px] text-[#38bdf8] hover:underline"
-                        >
-                          {storedRecord.txHash.slice(0, 10)}...{storedRecord.txHash.slice(-6)}
-                          <ExternalLink size={12} />
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={getExplorerTxUrl(storedRecord.txHash, currentNetwork.chainId)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 font-mono text-[11px] text-[#38bdf8] hover:underline"
+                          >
+                            {storedRecord.txHash.slice(0, 10)}...{storedRecord.txHash.slice(-6)}
+                            <ExternalLink size={12} />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyTxUrl(storedRecord.txHash!)}
+                            className="inline-flex items-center gap-1 rounded border border-[#38bdf8]/30 bg-[#38bdf8]/10 px-2 py-0.5 text-[10px] font-medium text-[#7dd3fc] hover:bg-[#38bdf8]/20"
+                          >
+                            {copiedTxUrl ? <Check size={10} /> : <Copy size={10} />}
+                            {copiedTxUrl ? 'Copied' : 'Copy URL'}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="rounded-lg bg-amber-950/30 p-2.5 border border-amber-500/20 text-[11px] text-amber-300">
@@ -985,7 +1182,7 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
             </Panel>
           )}
         </>
-      ) : (
+      ) : activeSubTab === 'explorer' ? (
         /* In-App Contract Explorer Tab */
         <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
@@ -1204,6 +1401,165 @@ export function BotChainPilotPanel({ wallet, onRefreshWallet }: BotChainPilotPan
               </div>
             )}
           </Panel>
+        </div>
+      ) : (
+        /* Owner-Only Submitter Allowlist Tab */
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Panel className="space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="text-[#38bdf8]" size={18} />
+                  <h3 className="font-semibold text-white">Partner Wallet Allowlist Status (Chain ID 677)</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={refreshAllowlistStatuses}
+                  className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-slate-300 hover:bg-white/[0.08]"
+                >
+                  <RefreshCw size={12} /> Refresh
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                {LEON_WALLETS.map((lw) => {
+                  const status = leonWalletPermissions[lw.address]
+                  const isAllowed = Boolean(status?.isAuthorizedSubmitter)
+                  return (
+                    <div
+                      key={lw.address}
+                      className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-white">{lw.label}</span>
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-semibold border ${
+                            isAllowed
+                              ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+                              : 'border-amber-500/30 bg-amber-500/15 text-amber-300'
+                          }`}
+                        >
+                          {status ? (isAllowed ? 'AUTHORIZED ON MAINNET' : 'PENDING AUTHORIZATION') : 'CHECKING...'}
+                        </span>
+                      </div>
+                      <div className="font-mono text-[11px] text-sky-300 break-all">{lw.address}</div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-400">
+                        <span>
+                          Gas Balance:{' '}
+                          <strong className="font-mono text-slate-200">
+                            {status ? `${Number(status.balanceFormatted).toFixed(5)} BOT` : '...'}
+                          </strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handlePrepareAuthorization(lw.address)}
+                          disabled={!wallet.isConnected || !walletPermission?.isOwner || !isWalletOnSelectedChain || isAllowed || isPreparingAuth}
+                          className="rounded-lg bg-[#0284c7] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#0369a1] disabled:opacity-40"
+                        >
+                          {isAllowed ? 'Already Authorized' : 'Simulate & Prepare'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Panel>
+
+            <Panel className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <Shield className="text-[#4ade80]" size={18} />
+                <h3 className="font-semibold text-white">Owner-Only MetaMask Authorization</h3>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1">
+                  <div className="text-slate-400">Contract Owner Required:</div>
+                  <div className="font-mono text-[11px] text-slate-200 break-all">
+                    0x31A826bB9D5F6087d94CDA31945C1234d061b788
+                  </div>
+                  <div className="pt-1 text-slate-400">
+                    Connected Signer:{' '}
+                    <span className="font-mono text-slate-200">{wallet.account ?? 'Not Connected'}</span>
+                  </div>
+                  {wallet.isConnected && walletPermission && !walletPermission.isOwner ? (
+                    <div className="pt-1 text-amber-300">
+                      Connected MetaMask account is not the contract owner. Switch to 0x31A8...b788 to authorize submitters.
+                    </div>
+                  ) : null}
+                </div>
+
+                <div>
+                  <label className="text-slate-400">Target Submitter Address (EIP-55)</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="text"
+                      value={targetAllowlistAddress}
+                      onChange={(e) => {
+                        setTargetAllowlistAddress(e.target.value)
+                        setPreparedAuth(null)
+                      }}
+                      placeholder="0x..."
+                      className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-[11px] text-white outline-none focus:border-[#38bdf8]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handlePrepareAuthorization()}
+                      disabled={!wallet.isConnected || !isWalletOnSelectedChain || isPreparingAuth}
+                      className="rounded-lg border border-sky-500/30 bg-sky-500/15 px-3 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/25 disabled:opacity-40"
+                    >
+                      {isPreparingAuth ? 'Simulating...' : 'Simulate & Estimate'}
+                    </button>
+                  </div>
+                </div>
+
+                {preparedAuth && !preparedAuth.alreadyInTargetState ? (
+                  <div className="rounded-xl border border-sky-500/30 bg-sky-950/25 p-3.5 space-y-2.5">
+                    <div className="text-xs font-semibold text-sky-300">
+                      Pre-Broadcast Simulation Passed — Review Before Confirming in MetaMask
+                    </div>
+                    <div className="grid gap-1 font-mono text-[11px] text-slate-300">
+                      <div>Method: setAuthorizedSubmitter(address, bool)</div>
+                      <div className="break-all">Destination: {preparedAuth.submitterAddress}</div>
+                      <div>Permission: authorized = true</div>
+                      <div>Estimated Gas: {String(preparedAuth.gasEstimate)} units</div>
+                      <div>Estimated Cost: {preparedAuth.estimatedCostBot} BOT</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleExecuteAuthorization}
+                      disabled={isExecutingAuth}
+                      className="w-full rounded-lg bg-emerald-600 py-2.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      {isExecutingAuth ? 'Awaiting MetaMask Confirmation & Receipt...' : 'Authorize in MetaMask'}
+                    </button>
+                  </div>
+                ) : null}
+
+                {executedAuthResult ? (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/25 p-3.5 space-y-1.5 text-xs">
+                    <div className="font-semibold text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 size={14} /> On-Chain Authorization Confirmed
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-300 break-all">
+                      Wallet: {executedAuthResult.submitterAddress}
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-300">
+                      Block: {String(executedAuthResult.blockNumber ?? '')} | authorizedSubmitters = {String(executedAuthResult.authorized)}
+                    </div>
+                    <a
+                      href={getExplorerTxUrl(executedAuthResult.txHash, currentNetwork.chainId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-mono text-[11px] text-sky-400 hover:underline"
+                    >
+                      <span>BOTScan Tx: {executedAuthResult.txHash}</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                ) : null}
+              </div>
+            </Panel>
+          </div>
         </div>
       )}
     </div>

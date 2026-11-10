@@ -7,28 +7,37 @@ const mocks = vi.hoisted(() => ({
   waitForTransactionReceipt: vi.fn(),
   readContract: vi.fn(),
   getBalance: vi.fn(),
+  simulateContract: vi.fn(),
+  estimateContractGas: vi.fn(),
+  getGasPrice: vi.fn(),
   walletChainId: vi.fn(),
   walletAddresses: vi.fn(),
   writeContract: vi.fn(),
 }))
 
-vi.mock('viem', () => ({
-  createPublicClient: () => ({
-    getChainId: mocks.rpcChainId,
-    getBytecode: mocks.getBytecode,
-    waitForTransactionReceipt: mocks.waitForTransactionReceipt,
-    readContract: mocks.readContract,
-    getBalance: mocks.getBalance,
-  }),
-  createWalletClient: () => ({
-    getChainId: mocks.walletChainId,
-    getAddresses: mocks.walletAddresses,
-    writeContract: mocks.writeContract,
-  }),
-  http: () => ({}),
-  custom: () => ({}),
-  isAddress: (value: string) => /^0x[0-9a-fA-F]{40}$/.test(value),
-}))
+vi.mock('viem', async () => {
+  const actual = await vi.importActual<typeof import('viem')>('viem')
+  return {
+    ...actual,
+    createPublicClient: () => ({
+      getChainId: mocks.rpcChainId,
+      getBytecode: mocks.getBytecode,
+      waitForTransactionReceipt: mocks.waitForTransactionReceipt,
+      readContract: mocks.readContract,
+      getBalance: mocks.getBalance,
+      simulateContract: mocks.simulateContract,
+      estimateContractGas: mocks.estimateContractGas,
+      getGasPrice: mocks.getGasPrice,
+    }),
+    createWalletClient: () => ({
+      getChainId: mocks.walletChainId,
+      getAddresses: mocks.walletAddresses,
+      writeContract: mocks.writeContract,
+    }),
+    http: () => ({}),
+    custom: () => ({}),
+  }
+})
 
 vi.mock('../lib/network', () => ({
   getEthereumProvider: () => ({ request: vi.fn() }),
@@ -61,7 +70,15 @@ vi.mock('../lib/botchainConfig', () => ({
   },
 }))
 
-import { readBotchainDataset, verifyBotchainDatasetHash, submitBotchainDataset, validateRegistrationPrerequisites } from '../lib/botchainClient'
+import {
+  readBotchainDataset,
+  verifyBotchainDatasetHash,
+  submitBotchainDataset,
+  validateRegistrationPrerequisites,
+  checkSubmitterPermissions,
+  prepareSetAuthorizedSubmitter,
+  executeSetAuthorizedSubmitter,
+} from '../lib/botchainClient'
 
 const ACCOUNT = '0x2222222222222222222222222222222222222222' as Hex
 const TX = ('0x' + '3'.repeat(64)) as Hex
@@ -214,6 +231,130 @@ describe('BOT Chain transactions never claim success without chain evidence', ()
       await expect(
         validateRegistrationPrerequisites({ walletChainId: 968, targetChainId: 677 })
       ).rejects.toThrow(/Connected wallet is on chain ID 968.*BOT Chain Mainnet.*required/i)
+    })
+  })
+
+  describe('owner allowlist governance helpers', () => {
+    const LEON_W1 = '0xF226C920957BD4B648EaF1A8d1f859057Ec605a4' as Hex
+
+    it('reads submitter permissions accurately when wallet is neither owner nor allowlisted', async () => {
+      mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'owner') return ACCOUNT
+        if (functionName === 'publicRegistrationEnabled') return false
+        if (functionName === 'authorizedSubmitters') return false
+        return false
+      })
+      mocks.getBalance.mockResolvedValue(30_374_540_000_000_000n)
+
+      const perm = await checkSubmitterPermissions(LEON_W1, 968)
+      expect(perm.address).toBe(LEON_W1)
+      expect(perm.isOwner).toBe(false)
+      expect(perm.isAuthorizedSubmitter).toBe(false)
+      expect(perm.canRegister).toBe(false)
+    })
+
+    it('rejects non-owner wallet when preparing setAuthorizedSubmitter', async () => {
+      mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'owner') return '0x31A826bB9D5F6087d94CDA31945C1234d061b788'
+        return false
+      })
+
+      await expect(
+        prepareSetAuthorizedSubmitter({
+          ownerAccount: ACCOUNT,
+          submitter: LEON_W1,
+          authorized: true,
+          walletChainId: 968,
+          targetChainId: 968,
+        }),
+      ).rejects.toThrow(/Owner authorization required/i)
+    })
+
+    it('detects already-authorized wallet cleanly during preparation without simulating write', async () => {
+      mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'owner') return ACCOUNT
+        if (functionName === 'authorizedSubmitters') return true
+        return false
+      })
+
+      const prepared = await prepareSetAuthorizedSubmitter({
+        ownerAccount: ACCOUNT,
+        submitter: LEON_W1,
+        authorized: true,
+        walletChainId: 968,
+        targetChainId: 968,
+      })
+
+      expect(prepared.alreadyInTargetState).toBe(true)
+      expect(mocks.simulateContract).not.toHaveBeenCalled()
+    })
+
+    it('simulates, estimates gas, submits, waits for receipt, and verifies post-state on authorization', async () => {
+      let authorizedState = false
+      mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'owner') return ACCOUNT
+        if (functionName === 'authorizedSubmitters') return authorizedState
+        return false
+      })
+      mocks.simulateContract.mockResolvedValue({ request: {} })
+      mocks.estimateContractGas.mockResolvedValue(46_200n)
+      mocks.getGasPrice.mockResolvedValue(20_000_000_000n)
+      mocks.writeContract.mockImplementation(async () => {
+        authorizedState = true
+        return TX
+      })
+      mocks.waitForTransactionReceipt.mockResolvedValue({
+        status: 'success',
+        transactionHash: TX,
+        blockNumber: 29300001n,
+      })
+
+      const prepared = await prepareSetAuthorizedSubmitter({
+        ownerAccount: ACCOUNT,
+        submitter: LEON_W1,
+        authorized: true,
+        walletChainId: 968,
+        targetChainId: 968,
+      })
+      expect(prepared.alreadyInTargetState).toBe(false)
+      expect(prepared.gasEstimate).toBe(46_200n)
+
+      authorizedState = false
+      const executed = await executeSetAuthorizedSubmitter({
+        ownerAccount: ACCOUNT,
+        submitter: LEON_W1,
+        authorized: true,
+        walletChainId: 968,
+        targetChainId: 968,
+      })
+      expect(executed.txHash).toBe(TX)
+      expect(executed.blockNumber).toBe(29300001n)
+      expect(executed.authorized).toBe(true)
+    })
+
+    it('rejects failed/reverted receipt in executeSetAuthorizedSubmitter', async () => {
+      mocks.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'owner') return ACCOUNT
+        if (functionName === 'authorizedSubmitters') return false
+        return false
+      })
+      mocks.simulateContract.mockResolvedValue({ request: {} })
+      mocks.estimateContractGas.mockResolvedValue(46_200n)
+      mocks.getGasPrice.mockResolvedValue(20_000_000_000n)
+      mocks.waitForTransactionReceipt.mockResolvedValue({
+        status: 'reverted',
+        transactionHash: TX,
+      })
+
+      await expect(
+        executeSetAuthorizedSubmitter({
+          ownerAccount: ACCOUNT,
+          submitter: LEON_W1,
+          authorized: true,
+          walletChainId: 968,
+          targetChainId: 968,
+        }),
+      ).rejects.toThrow(/failed or reverted/i)
     })
   })
 })

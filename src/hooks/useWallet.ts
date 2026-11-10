@@ -119,7 +119,7 @@ export function useWallet() {
   const connectWallet = async () => {
     const provider = getEthereumProvider()
     if (!provider) {
-      setWallet((state) => ({ ...state, error: 'MetaMask is required for direct XRPL EVM wallet connectivity.' }))
+      setWallet((state) => ({ ...state, error: 'MetaMask is required for direct BOT Chain Mainnet wallet connectivity.' }))
       return
     }
 

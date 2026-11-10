@@ -39,7 +39,7 @@ export default function App() {
       {!wallet.isMetaMaskAvailable ? (
         <div className="flex items-center gap-3 rounded-[18px] bg-amber/10 px-5 py-4 text-sm text-amber-100">
           <AlertTriangle size={18} />
-          MetaMask not detected. The UI remains fully explorable in mock mode, but live XRPL EVM wallet actions require a browser wallet.
+          MetaMask not detected. Read-only contract verification remains available, while live on-chain registration requires a browser wallet.
         </div>
       ) : null}
 

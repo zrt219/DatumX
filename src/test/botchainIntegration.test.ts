@@ -7,9 +7,12 @@ import {
   validateRegistrationPrerequisites,
   submitBotchainDataset,
   readBotchainDataset,
+  verifyBotchainDatasetHash,
+  checkSubmitterPermissions,
   botchainPublicClient,
+  botchainMainnetPublicClient,
 } from '../lib/botchainClient'
-import { setBotchainRegistryAddress, BOTCHAIN_TESTNET } from '../lib/botchainConfig'
+import { setBotchainRegistryAddress, setBotchainMainnetRegistryAddress, BOTCHAIN_TESTNET, BOTCHAIN_MAINNET } from '../lib/botchainConfig'
 
 interface EthereumProviderWindow {
   ethereum?: {
@@ -392,6 +395,81 @@ describe('BotChain integration and security pre-flight checks', () => {
       await expect(readBotchainDataset(dummyDatasetId)).rejects.toThrow(
         /registry contract address not configured/i,
       )
+    })
+  })
+
+  describe('BOT Chain Mainnet (677) partner wallet permission & verification flow', () => {
+    const MAINNET_CONTRACT = '0xEe555DA23F972c5B09eAd7f9D4B215E640b9E9B7' as `0x${string}`
+    const OWNER_WALLET = '0x31A826bB9D5F6087d94CDA31945C1234d061b788' as `0x${string}`
+    const LEON_W1 = '0xF226C920957BD4B648EaF1A8d1f859057Ec605a4' as `0x${string}`
+
+    beforeEach(() => {
+      setBotchainMainnetRegistryAddress(MAINNET_CONTRACT)
+    })
+
+    it('accepts an allowlisted partner wallet on Chain ID 677 and rejects unallowlisted wallets', async () => {
+      vi.spyOn(botchainMainnetPublicClient, 'getChainId').mockResolvedValue(BOTCHAIN_MAINNET.chainId)
+      vi.spyOn(botchainMainnetPublicClient, 'getBytecode').mockResolvedValue('0x6080')
+      vi.spyOn(botchainMainnetPublicClient, 'getBalance').mockResolvedValue(30_000_000_000_000_000n)
+      vi.spyOn(botchainMainnetPublicClient, 'readContract').mockImplementation(async (args: unknown) => {
+        const callArgs = args as { functionName: string; args?: readonly unknown[] }
+        if (callArgs.functionName === 'publicRegistrationEnabled') return false as never
+        if (callArgs.functionName === 'owner') return OWNER_WALLET as never
+        if (callArgs.functionName === 'authorizedSubmitters') {
+          const target = String(callArgs.args?.[0] ?? '').toLowerCase()
+          return (target === LEON_W1.toLowerCase()) as never
+        }
+        return true as never
+      })
+
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: 677,
+          targetChainId: 677,
+          account: LEON_W1,
+        }),
+      ).resolves.toBeUndefined()
+
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: 677,
+          targetChainId: 677,
+          account: unauthorizedAccount,
+        }),
+      ).rejects.toThrow(/lacks permission to register datasets/i)
+
+      const perm = await checkSubmitterPermissions(LEON_W1, 677)
+      expect(perm.isAuthorizedSubmitter).toBe(true)
+      expect(perm.canRegister).toBe(true)
+    })
+
+    it('rejects wrong or missing bytecode at configured Mainnet contract address', async () => {
+      vi.spyOn(botchainMainnetPublicClient, 'getChainId').mockResolvedValue(677)
+      vi.spyOn(botchainMainnetPublicClient, 'getBytecode').mockResolvedValue('0x')
+
+      await expect(
+        validateRegistrationPrerequisites({
+          walletChainId: 677,
+          targetChainId: 677,
+          account: LEON_W1,
+        }),
+      ).rejects.toThrow(/No contract bytecode found at configured address/)
+    })
+
+    it('verifies original payload MATCH and modified payload MISMATCH via verifyBotchainDatasetHash on Chain 677', async () => {
+      vi.spyOn(botchainMainnetPublicClient, 'getChainId').mockResolvedValue(677)
+      vi.spyOn(botchainMainnetPublicClient, 'getBytecode').mockResolvedValue('0x6080')
+      const tamperedHash = '0x7c431f80f87ba10accb0ef608bdcc4846fb2c0a160d2d62d43c0b3ec187e0ce9' as `0x${string}`
+      vi.spyOn(botchainMainnetPublicClient, 'readContract').mockImplementation(async (args: unknown) => {
+        const callArgs = args as { functionName: string; args?: readonly unknown[] }
+        if (callArgs.functionName === 'verifyDatasetHash') {
+          return (callArgs.args?.[1] === dummyDatasetHash) as never
+        }
+        return true as never
+      })
+
+      expect(await verifyBotchainDatasetHash(dummyDatasetId, dummyDatasetHash, 677)).toBe(true)
+      expect(await verifyBotchainDatasetHash(dummyDatasetId, tamperedHash, 677)).toBe(false)
     })
   })
 })

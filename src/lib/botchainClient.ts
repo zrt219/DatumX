@@ -2,6 +2,8 @@ import {
   createPublicClient,
   createWalletClient,
   custom,
+  formatEther,
+  getAddress,
   http,
   isAddress,
   type Hex,
@@ -95,6 +97,22 @@ export function getBotchainWalletClient(chainId: number = BOTCHAIN_MAINNET.chain
 }
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+const PLACEHOLDER_ADDRESS = '0x1234567890123456789012345678901234567890'
+
+function resolveRegistryAddress(targetChainId: number): `0x${string}` | undefined {
+  return targetChainId === BOTCHAIN_MAINNET.chainId
+    ? (config.BOTCHAIN_MAINNET_CONFIG?.registryAddress ||
+        config.BOTCHAIN_PILOT_CONFIG?.mainnetRegistryAddress ||
+        config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(BOTCHAIN_MAINNET.chainId))
+    : (config.BOTCHAIN_PILOT_CONFIG?.pilotRegistryAddress ||
+        config.BOTCHAIN_PILOT_CONFIG?.getRegistryAddress?.(BOTCHAIN_TESTNET.chainId))
+}
+
+function isUsableRegistryAddress(address?: string): address is `0x${string}` {
+  if (!address || !isAddress(address)) return false
+  const lower = address.toLowerCase()
+  return lower !== ZERO_ADDRESS && lower !== PLACEHOLDER_ADDRESS
+}
 
 export function isBotchainContractConfigured(chainId?: number): boolean {
   let address: string | undefined
@@ -547,4 +565,307 @@ export async function submitBotchainDataset(
   }
 
   return txHash
+}
+
+export interface SubmitterPermissionStatus {
+  address: `0x${string}`
+  owner: `0x${string}`
+  isOwner: boolean
+  isAuthorizedSubmitter: boolean
+  publicRegistrationEnabled: boolean
+  canRegister: boolean
+  balanceWei: bigint
+  balanceFormatted: string
+}
+
+/**
+ * Reads live owner, allowlist permission, and gas balance for a candidate submitter wallet.
+ */
+export async function checkSubmitterPermissions(
+  account: string,
+  targetChainId: number = BOTCHAIN_MAINNET.chainId,
+  customClient?: typeof botchainPublicClient,
+): Promise<SubmitterPermissionStatus> {
+  if (!isAddress(account) || account.toLowerCase() === ZERO_ADDRESS) {
+    throw new Error(`Invalid wallet address: ${account}`)
+  }
+
+  const checksummed = getAddress(account)
+  const network = targetChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+  const client = customClient || (targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
+  const address = resolveRegistryAddress(targetChainId)
+
+  if (!isUsableRegistryAddress(address)) {
+    throw new Error(`${network.name} registry contract address not configured.`)
+  }
+
+  const rpcChainId = await client.getChainId()
+  if (rpcChainId !== network.chainId) {
+    throw new Error(`BOT Chain RPC network mismatch: ${network.name} (Chain ID ${network.chainId}) required.`)
+  }
+
+  const bytecode = await client.getBytecode({ address })
+  if (!bytecode || bytecode === '0x') {
+    throw new Error(`BOT Chain contract bytecode not deployed at configured address: ${address}`)
+  }
+
+  const [ownerAddress, publicReg, isAllowed, balanceWei] = await Promise.all([
+    client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'owner',
+    }),
+    client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'publicRegistrationEnabled',
+    }),
+    client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'authorizedSubmitters',
+      args: [checksummed],
+    }),
+    client.getBalance({ address: checksummed }),
+  ])
+
+  const owner = getAddress(ownerAddress)
+  const isOwner = owner.toLowerCase() === checksummed.toLowerCase()
+  const isAuthorizedSubmitter = Boolean(isAllowed)
+  const publicRegistrationEnabled = Boolean(publicReg)
+
+  return {
+    address: checksummed,
+    owner,
+    isOwner,
+    isAuthorizedSubmitter,
+    publicRegistrationEnabled,
+    canRegister: publicRegistrationEnabled || isOwner || isAuthorizedSubmitter,
+    balanceWei,
+    balanceFormatted: formatEther(balanceWei),
+  }
+}
+
+export interface SetAuthorizedSubmitterParams {
+  ownerAccount: `0x${string}`
+  submitter: string
+  authorized: boolean
+  walletChainId?: number
+  targetChainId?: number
+  publicClient?: typeof botchainPublicClient
+}
+
+export interface PreparedSubmitterAuthorization {
+  registryAddress: `0x${string}`
+  ownerAddress: `0x${string}`
+  submitterAddress: `0x${string}`
+  authorized: boolean
+  alreadyInTargetState: boolean
+  gasEstimate: bigint
+  gasPriceWei: bigint
+  estimatedCostWei: bigint
+  estimatedCostBot: string
+}
+
+export interface ExecutedSubmitterAuthorization {
+  txHash: Hex
+  blockNumber: bigint | null
+  registryAddress: `0x${string}`
+  ownerAddress: `0x${string}`
+  submitterAddress: `0x${string}`
+  authorized: boolean
+  receiptStatus: 'success' | 'reverted'
+}
+
+/**
+ * Validates ownership, network, allowlist state, contract simulation, and gas estimate
+ * prior to requesting an explicit MetaMask signature for setAuthorizedSubmitter.
+ */
+export async function prepareSetAuthorizedSubmitter(
+  params: SetAuthorizedSubmitterParams,
+): Promise<PreparedSubmitterAuthorization> {
+  if (!isAddress(params.ownerAccount) || params.ownerAccount.toLowerCase() === ZERO_ADDRESS) {
+    throw new Error('Connected owner wallet address is invalid.')
+  }
+  if (!isAddress(params.submitter) || params.submitter.toLowerCase() === ZERO_ADDRESS) {
+    throw new Error(`Target submitter address is invalid or zero: ${params.submitter}`)
+  }
+
+  const checksummedOwner = getAddress(params.ownerAccount)
+  const checksummedSubmitter = getAddress(params.submitter)
+  const targetChainId = params.targetChainId ?? BOTCHAIN_MAINNET.chainId
+  const network = targetChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+  const client = params.publicClient || (targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
+
+  if (params.walletChainId !== undefined && params.walletChainId !== network.chainId) {
+    throw new Error(
+      `Incorrect network: Connected wallet is on chain ID ${params.walletChainId}. ${network.name} (Chain ID ${network.chainId}) is required.`,
+    )
+  }
+
+  const rpcChainId = await client.getChainId()
+  if (rpcChainId !== network.chainId) {
+    throw new Error(
+      `Incorrect RPC network: Connected RPC is on chain ID ${rpcChainId}. ${network.name} (Chain ID ${network.chainId}) is required.`,
+    )
+  }
+
+  const address = resolveRegistryAddress(targetChainId)
+  if (!isUsableRegistryAddress(address)) {
+    throw new Error(`No verified ${network.name} registry contract address configured.`)
+  }
+
+  const bytecode = await client.getBytecode({ address })
+  if (!bytecode || bytecode === '0x') {
+    throw new Error(`No contract bytecode deployed at configured address ${address} on ${network.name}.`)
+  }
+
+  const contractOwner = getAddress(
+    await client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'owner',
+    }),
+  )
+
+  if (contractOwner.toLowerCase() !== checksummedOwner.toLowerCase()) {
+    throw new Error(
+      `Owner authorization required: Connected wallet ${checksummedOwner} is not the contract owner (${contractOwner}).`,
+    )
+  }
+
+  const currentlyAuthorized = Boolean(
+    await client.readContract({
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'authorizedSubmitters',
+      args: [checksummedSubmitter],
+    }),
+  )
+
+  if (currentlyAuthorized === params.authorized) {
+    return {
+      registryAddress: address,
+      ownerAddress: contractOwner,
+      submitterAddress: checksummedSubmitter,
+      authorized: params.authorized,
+      alreadyInTargetState: true,
+      gasEstimate: 0n,
+      gasPriceWei: 0n,
+      estimatedCostWei: 0n,
+      estimatedCostBot: '0',
+    }
+  }
+
+  if (typeof client.simulateContract === 'function') {
+    await client.simulateContract({
+      account: checksummedOwner,
+      address,
+      abi: botChainRegistryAbi,
+      functionName: 'setAuthorizedSubmitter',
+      args: [checksummedSubmitter, params.authorized],
+    })
+  }
+
+  const gasEstimate =
+    typeof client.estimateContractGas === 'function'
+      ? await client.estimateContractGas({
+          account: checksummedOwner,
+          address,
+          abi: botChainRegistryAbi,
+          functionName: 'setAuthorizedSubmitter',
+          args: [checksummedSubmitter, params.authorized],
+        })
+      : 50_000n
+
+  const gasPriceWei = typeof client.getGasPrice === 'function' ? await client.getGasPrice() : 20_000_000_000n
+  const estimatedCostWei = gasEstimate * gasPriceWei
+
+  return {
+    registryAddress: address,
+    ownerAddress: contractOwner,
+    submitterAddress: checksummedSubmitter,
+    authorized: params.authorized,
+    alreadyInTargetState: false,
+    gasEstimate,
+    gasPriceWei,
+    estimatedCostWei,
+    estimatedCostBot: formatEther(estimatedCostWei),
+  }
+}
+
+/**
+ * Executes setAuthorizedSubmitter(submitter, authorized) via the connected MetaMask owner wallet,
+ * waits for on-chain receipt confirmation, and verifies the resulting authorizedSubmitters state.
+ */
+export async function executeSetAuthorizedSubmitter(
+  params: SetAuthorizedSubmitterParams,
+): Promise<ExecutedSubmitterAuthorization> {
+  const prepared = await prepareSetAuthorizedSubmitter(params)
+  if (prepared.alreadyInTargetState) {
+    throw new Error(
+      `Wallet ${prepared.submitterAddress} already has authorizedSubmitters = ${params.authorized}. No transaction needed.`,
+    )
+  }
+
+  const targetChainId = params.targetChainId ?? BOTCHAIN_MAINNET.chainId
+  const network = targetChainId === BOTCHAIN_MAINNET.chainId ? BOTCHAIN_MAINNET : BOTCHAIN_TESTNET
+  const chain = targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetChain : botchainTestnetChain
+  const client = params.publicClient || (targetChainId === BOTCHAIN_MAINNET.chainId ? botchainMainnetPublicClient : botchainPublicClient)
+
+  const walletClient = getBotchainWalletClient(targetChainId)
+  if (!walletClient) {
+    throw new Error(`No Ethereum wallet detected for ${network.name} owner signing.`)
+  }
+
+  const walletChain = await walletClient.getChainId()
+  if (walletChain !== network.chainId) {
+    throw new Error(`Wrong wallet chain: ${network.name} (Chain ID ${network.chainId}) required.`)
+  }
+
+  const accounts = await walletClient.getAddresses()
+  if (!accounts.some((a) => a.toLowerCase() === prepared.ownerAddress.toLowerCase())) {
+    throw new Error(`Wallet account mismatch: Active MetaMask account is not contract owner (${prepared.ownerAddress}).`)
+  }
+
+  const txHash = await walletClient.writeContract({
+    chain,
+    account: prepared.ownerAddress,
+    address: prepared.registryAddress,
+    abi: botChainRegistryAbi,
+    functionName: 'setAuthorizedSubmitter',
+    args: [prepared.submitterAddress, params.authorized],
+  })
+
+  const receipt = await client.waitForTransactionReceipt({ hash: txHash, confirmations: 1 })
+  if (receipt.status !== 'success' || receipt.transactionHash.toLowerCase() !== txHash.toLowerCase()) {
+    throw new Error(
+      `Owner authorization transaction failed or reverted on-chain with status "${receipt.status}". Tx: ${txHash}`,
+    )
+  }
+
+  const verifiedState = Boolean(
+    await client.readContract({
+      address: prepared.registryAddress,
+      abi: botChainRegistryAbi,
+      functionName: 'authorizedSubmitters',
+      args: [prepared.submitterAddress],
+    }),
+  )
+
+  if (verifiedState !== params.authorized) {
+    throw new Error(
+      `Post-receipt verification failed: authorizedSubmitters(${prepared.submitterAddress}) returned ${verifiedState}, expected ${params.authorized}.`,
+    )
+  }
+
+  return {
+    txHash,
+    blockNumber: receipt.blockNumber ?? null,
+    registryAddress: prepared.registryAddress,
+    ownerAddress: prepared.ownerAddress,
+    submitterAddress: prepared.submitterAddress,
+    authorized: verifiedState,
+    receiptStatus: receipt.status,
+  }
 }
